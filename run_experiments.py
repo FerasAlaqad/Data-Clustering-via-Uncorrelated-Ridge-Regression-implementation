@@ -1,6 +1,12 @@
 """
-Comprehensive benchmark experiments for RURR-SL paper implementation.
-Tests all algorithms on selected datasets and compares results.
+Comprehensive benchmark experiments exactly following the paper's methodology.
+
+Paper Section VI.C states:
+- Each experiment run 10 times
+- λ searched in [10^-4, 10^-3, 10^-2, 10^-1, 1, 10^1, 10^2, 10^3, 10^4]
+- FKM fuzzy level = 2.5
+- RSFKM parameter tuned in [10, 15, 20, 25, 30, 35, 40, 45, 50]
+- Real cluster number c is pre-given
 """
 
 import numpy as np
@@ -12,7 +18,9 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # Import algorithms
-from rurr_implementation import RURR_SL, URR_SL, clustering_accuracy
+from rurr_implementation import RURR_SL, URR_SL, clustering_accuracy, normalized_mutual_info
+
+# Import baseline algorithms
 from baseline_algorithms import KMeansClustering, RMKMC, FuzzyKMeans, RSFKM
 
 # Import dataset loaders
@@ -22,22 +30,43 @@ from load_datasets import (
     load_att_faces,
     load_gt_faces,
     load_flower17,
+    load_imm_faces,
+    load_toy_dataset,
 )
-from generate_toy_datasets import load_toy_dataset
 
 
-# Available datasets
+# Paper Section VI.C: λ parameter search grid
+LAMBDA_GRID = [1e-4, 1e-3, 1e-2, 1e-1, 1.0, 1e1, 1e2, 1e3, 1e4]
+
+# Paper Section VI.C: RSFKM parameter search grid
+RSFKM_CAP_GRID = [10, 15, 20, 25, 30, 35, 40, 45, 50]
+
+
+# Available datasets (Paper Table I + Additional Tests)
 AVAILABLE_DATASETS = {
+    # Paper Synthetic Datasets (Figures 3-4)
     "3cluster": {
         "name": "3-Cluster Gaussian",
-        "loader": lambda: load_toy_dataset('3cluster'),
-        "description": "Synthetic 3-cluster Gaussian data (Fig. 3)"
+        "loader": lambda: load_toy_dataset('3cluster', use_saved=True, allow_generate=False),
+        "description": "Synthetic 3-cluster Gaussian data (Paper Fig. 3)"
     },
     "multicluster": {
         "name": "Multicluster",
-        "loader": lambda: load_toy_dataset('multicluster'),
-        "description": "Synthetic multicluster data (Fig. 4)"
+        "loader": lambda: load_toy_dataset('multicluster', use_saved=True, allow_generate=False),
+        "description": "Synthetic multicluster data (Paper Fig. 4)"
     },
+    # Additional Synthetic Datasets
+    "nested_circles": {
+        "name": "Nested Circles",
+        "loader": lambda: load_toy_dataset('nested_circles', use_saved=True, allow_generate=False),
+        "description": "Nested circles clustering problem"
+    },
+    "moons": {
+        "name": "Two Moons",
+        "loader": lambda: load_toy_dataset('moons', use_saved=True, allow_generate=False),
+        "description": "Two moons clustering problem"
+    },
+    # Paper Real Datasets (Table I)
     "colon": {
         "name": "COLON",
         "loader": lambda: load_colon_csv("datasets/colon - labled.csv"),
@@ -49,12 +78,12 @@ AVAILABLE_DATASETS = {
         "description": "Gene expression data (50 samples, 4434 genes, 4 classes)"
     },
     "att_faces": {
-        "name": "AT&T Faces",
+        "name": "AT&T",
         "loader": lambda: load_att_faces("datasets/att_faces"),
-        "description": "Face recognition (400 images, 40 subjects)"
+        "description": "AT&T face database (400 images, 40 subjects)"
     },
     "gt_faces": {
-        "name": "GT Faces",
+        "name": "GT",
         "loader": lambda: load_gt_faces("datasets/gt_db"),
         "description": "Georgia Tech faces (750 images, 50 subjects)"
     },
@@ -63,104 +92,208 @@ AVAILABLE_DATASETS = {
         "loader": lambda: load_flower17("datasets/flower17"),
         "description": "Oxford flowers (1360 images, 17 categories)"
     },
+    "imm": {
+        "name": "IMM",
+        "loader": lambda: load_imm_faces("datasets/imm"),
+        "description": "IMM face database (240 images, 40 subjects)"
+    },
 }
 
 
-def normalized_mutual_info_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+def prompt_user_for_datasets(default_selection: List[str]) -> List[str]:
     """
-    Compute NMI as defined in the paper (geometric mean normalization).
-
-    NMI = (sum_{i,j} (n_{ij}/n) * log( (n_{ij} * n) / (n_i * n_j) )) /
-          sqrt( sum_i (n_i/n) * log(n_i/n) * sum_j (n_j/n) * log(n_j/n) )
+    Prompt the user to choose which datasets to train/test on.
+    
+    Parameters
+    ----------
+    default_selection : list of str
+        Dataset keys used when the user presses Enter without a choice.
+    
+    Returns
+    -------
+    list of str
+        Valid dataset keys selected by the user.
     """
-    y_true = np.asarray(y_true)
-    y_pred = np.asarray(y_pred)
-    assert y_true.shape == y_pred.shape
-
-    n = y_true.size
-    if n == 0:
-        return 0.0
-
-    true_labels = np.unique(y_true)
-    pred_labels = np.unique(y_pred)
-
-    n_true = true_labels.size
-    n_pred = pred_labels.size
-
-    # Build contingency table
-    contingency = np.zeros((n_true, n_pred), dtype=float)
-    label_to_index_true = {label: idx for idx, label in enumerate(true_labels)}
-    label_to_index_pred = {label: idx for idx, label in enumerate(pred_labels)}
-
-    for t, p in zip(y_true, y_pred):
-        contingency[label_to_index_true[t], label_to_index_pred[p]] += 1
-
-    # Marginals
-    n_i = contingency.sum(axis=1)  # true cluster sizes
-    n_j = contingency.sum(axis=0)  # predicted cluster sizes
-
-    # Compute mutual information
-    mi = 0.0
-    for i in range(n_true):
-        for j in range(n_pred):
-            n_ij = contingency[i, j]
-            if n_ij > 0:
-                mi += (n_ij / n) * np.log((n_ij * n) / (n_i[i] * n_j[j]))
-
-    # Compute entropies (using natural log)
-    h_true = 0.0
-    for i in range(n_true):
-        if n_i[i] > 0:
-            p = n_i[i] / n
-            h_true -= p * np.log(p)
-
-    h_pred = 0.0
-    for j in range(n_pred):
-        if n_j[j] > 0:
-            p = n_j[j] / n
-            h_pred -= p * np.log(p)
-
-    denom = np.sqrt(h_true * h_pred)
-    if denom == 0:
-        return 0.0
-
-    return mi / denom
+    print("\nAvailable datasets:")
+    indexed_keys = list(AVAILABLE_DATASETS.keys())
+    for idx, key in enumerate(indexed_keys, start=1):
+        meta = AVAILABLE_DATASETS[key]
+        print(f"  {idx:>2}. {key:<15} ({meta['name']})")
+    
+    default_display = ", ".join(default_selection)
+    prompt = (
+        "\nEnter dataset numbers separated by space or comma (e.g., '1 4 7'),\n"
+        "type 'all' to run every dataset, or press Enter to use the default selection.\n"
+        f"Default selection: [{default_display}]\n"
+        "Selection: "
+    )
+    
+    while True:
+        user_input = input(prompt).strip()
+        
+        if not user_input:
+            return default_selection
+        
+        if user_input.lower() == 'all':
+            return list(AVAILABLE_DATASETS.keys())
+        
+        tokens = [token.strip() for token in user_input.replace(",", " ").split()]
+        selections = []
+        invalid = []
+        
+        for token in tokens:
+            if not token:
+                continue
+            if not token.isdigit():
+                invalid.append(token)
+                continue
+            index = int(token)
+            if index < 1 or index > len(indexed_keys):
+                invalid.append(token)
+                continue
+            selections.append(indexed_keys[index - 1])
+        
+        if invalid:
+            print(f"\nInvalid dataset key(s): {', '.join(invalid)}")
+            print("Please enter numbers shown in the dataset list.")
+            continue
+        
+        return selections
 
 
-def run_algorithm(algo_name: str, algo, X: np.ndarray, y_true: np.ndarray) -> Dict:
+def tune_lambda_parameter(X: np.ndarray, y_true: np.ndarray, n_clusters: int, 
+                          algorithm_class, n_trials: int = 3) -> float:
     """
-    Run a single algorithm and measure performance.
+    Tune λ parameter using grid search as specified in Paper Section VI.C
+    
+    Parameters
+    ----------
+    X : ndarray of shape (d, n)
+        Data matrix
+    y_true : ndarray
+        True labels
+    n_clusters : int
+        Number of clusters
+    algorithm_class : class
+        Either RURR_SL or URR_SL
+    n_trials : int
+        Number of trials per λ value (for averaging)
+        
+    Returns
+    -------
+    best_lambda : float
+        Best λ value
+    """
+    best_lambda = 1.0
+    best_acc = 0.0
+    
+    for lambda_val in LAMBDA_GRID:
+        acc_list = []
+        
+        for trial in range(n_trials):
+            seed = 42 + trial
+            
+            if algorithm_class == RURR_SL:
+                algo = RURR_SL(n_clusters=n_clusters, lambda_reg=lambda_val, 
+                              max_iter=100, random_state=seed)
+            else:  # URR_SL
+                algo = URR_SL(n_clusters=n_clusters, alpha=1.0, lambda_reg=lambda_val,
+                             max_iter=100, random_state=seed)
+            
+            try:
+                algo.fit(X)
+                y_pred = algo.predict()
+                acc = clustering_accuracy(y_true, y_pred)
+                acc_list.append(acc)
+            except:
+                pass
+        
+        if acc_list:
+            avg_acc = np.mean(acc_list)
+            if avg_acc > best_acc:
+                best_acc = avg_acc
+                best_lambda = lambda_val
+    
+    return best_lambda
+
+
+def tune_rsfkm_parameter(X: np.ndarray, y_true: np.ndarray, n_clusters: int,
+                         n_trials: int = 3) -> int:
+    """
+    Tune RSFKM cap parameter as specified in Paper Section VI.C
+    
+    Parameters
+    ----------
+    X : ndarray of shape (d, n)
+        Data matrix
+    y_true : ndarray
+        True labels
+    n_clusters : int
+        Number of clusters
+    n_trials : int
+        Number of trials per cap value
+        
+    Returns
+    -------
+    best_cap : int
+        Best cap value
+    """
+    best_cap = 30
+    best_acc = 0.0
+    
+    for cap_val in RSFKM_CAP_GRID:
+        acc_list = []
+        
+        for trial in range(n_trials):
+            seed = 42 + trial
+            algo = RSFKM(n_clusters=n_clusters, fuzziness=2.0, cap=cap_val, 
+                        max_iter=100, random_state=seed)
+            
+            try:
+                algo.fit(X)
+                y_pred = algo.predict()
+                acc = clustering_accuracy(y_true, y_pred)
+                acc_list.append(acc)
+            except:
+                pass
+        
+        if acc_list:
+            avg_acc = np.mean(acc_list)
+            if avg_acc > best_acc:
+                best_acc = avg_acc
+                best_cap = cap_val
+    
+    return best_cap
+
+
+def run_single_experiment(algo_name: str, algo, X: np.ndarray, y_true: np.ndarray) -> Dict:
+    """
+    Run a single algorithm and measure performance
     
     Parameters
     ----------
     algo_name : str
-        Algorithm name for display
+        Algorithm name
     algo : object
-        Algorithm instance with fit() and predict() methods
-    X : ndarray
-        Data matrix (d, n)
+        Algorithm instance
+    X : ndarray of shape (d, n)
+        Data matrix
     y_true : ndarray
         True labels
         
     Returns
     -------
     results : dict
-        Dictionary containing accuracy, NMI, and runtime
+        Performance metrics
     """
-    print(f"    Running {algo_name}...", end=" ", flush=True)
-    
     try:
-        # Measure runtime
         start_time = time.time()
         algo.fit(X)
         y_pred = algo.predict()
         runtime = time.time() - start_time
         
-        # Calculate metrics
         acc = clustering_accuracy(y_true, y_pred)
-        nmi = normalized_mutual_info_score(y_true, y_pred)
-        
-        print(f"✓ (ACC: {acc:.4f}, NMI: {nmi:.4f}, Time: {runtime:.2f}s)")
+        nmi = normalized_mutual_info(y_true, y_pred)
         
         return {
             "accuracy": acc,
@@ -171,7 +304,6 @@ def run_algorithm(algo_name: str, algo, X: np.ndarray, y_true: np.ndarray) -> Di
         }
     
     except Exception as e:
-        print(f"✗ Failed: {str(e)}")
         return {
             "accuracy": 0.0,
             "nmi": 0.0,
@@ -181,34 +313,34 @@ def run_algorithm(algo_name: str, algo, X: np.ndarray, y_true: np.ndarray) -> Di
         }
 
 
-def run_experiments_on_dataset(
-    dataset_key: str,
-    n_runs: int = 10,
-    lambda_reg: float = 1.0,
-    urr_alpha: float = 1.0
-) -> Dict:
+def run_experiments_on_dataset(dataset_key: str, n_runs: int = 10, 
+                               tune_params: bool = True) -> Dict:
     """
-    Run all algorithms on a single dataset multiple times.
+    Run all algorithms on a single dataset following paper's methodology
+    
+    Paper Section VI.C:
+    - Run each experiment 10 times
+    - Tune λ for URR-SL and RURR-SL
+    - Tune cap for RSFKM
+    - FKM uses fuzzy level = 2.5
     
     Parameters
     ----------
     dataset_key : str
         Dataset identifier
     n_runs : int
-        Number of runs for averaging
-    lambda_reg : float
-        Regularization parameter for URR/RURR
-    urr_alpha : float
-        Fixed alpha for URR-SL
+        Number of runs (paper uses 10)
+    tune_params : bool
+        Whether to tune parameters (paper does this)
         
     Returns
     -------
     results : dict
         Results for all algorithms
     """
-    print(f"\n{'='*70}")
+    print(f"\n{'='*80}")
     print(f"Dataset: {AVAILABLE_DATASETS[dataset_key]['name']}")
-    print(f"{'='*70}")
+    print(f"{'='*80}")
     
     # Load dataset
     print("  Loading dataset...", end=" ", flush=True)
@@ -218,36 +350,78 @@ def run_experiments_on_dataset(
         print(f"✓")
         print(f"    Shape: {X.shape} (features × samples)")
         print(f"    Clusters: {n_clusters}")
-        print(f"    Samples per cluster: {np.bincount(y_true.astype(int))}")
+        print(f"    Samples: {np.bincount(y_true.astype(int))}")
     except Exception as e:
-        print(f"✗ Failed to load: {e}")
+        print(f"✗ Failed: {e}")
         return None
     
-    # Initialize algorithms
-    algorithms = {
-        "K-means": KMeansClustering(n_clusters=n_clusters, random_state=42),
-        "RMKMC": RMKMC(n_clusters=n_clusters, random_state=42),
-        "FKM": FuzzyKMeans(n_clusters=n_clusters, fuzziness=2.5, random_state=42),
-        "RSFKM": RSFKM(n_clusters=n_clusters, fuzziness=2.0, cap=30, random_state=42),
-        "URR-SL": URR_SL(n_clusters=n_clusters, alpha=urr_alpha, lambda_reg=lambda_reg, max_iter=100),
-        "RURR-SL": RURR_SL(n_clusters=n_clusters, lambda_reg=lambda_reg, max_iter=100),
+    # Tune parameters (Paper Section VI.C)
+    if tune_params:
+        print("\n  Tuning parameters...")
+        
+        print("    Tuning λ for RURR-SL...", end=" ", flush=True)
+        best_lambda_rurr = tune_lambda_parameter(X, y_true, n_clusters, RURR_SL, n_trials=3)
+        print(f"✓ Best λ = {best_lambda_rurr}")
+        
+        print("    Tuning λ for URR-SL...", end=" ", flush=True)
+        best_lambda_urr = tune_lambda_parameter(X, y_true, n_clusters, URR_SL, n_trials=3)
+        print(f"✓ Best λ = {best_lambda_urr}")
+        
+        print("    Tuning cap for RSFKM...", end=" ", flush=True)
+        best_cap = tune_rsfkm_parameter(X, y_true, n_clusters, n_trials=3)
+        print(f"✓ Best cap = {best_cap}")
+    else:
+        # Use default values
+        best_lambda_rurr = 1.0
+        best_lambda_urr = 1.0
+        best_cap = 30
+    
+    # Run experiments (Paper: 10 times)
+    print(f"\n  Running {n_runs} experiments:")
+    
+    all_results = {
+        "K-means": [],
+        "RMKMC": [],
+        "FKM": [],
+        "RSFKM": [],
+        "URR-SL": [],
+        "RURR-SL": []
     }
     
-    # Store results for each algorithm
-    all_results = {name: [] for name in algorithms.keys()}
-    
-    # Run experiments
-    print(f"\n  Running {n_runs} experiments:")
     for run_idx in range(n_runs):
-        print(f"\n  Run {run_idx + 1}/{n_runs}:")
+        print(f"\n    Run {run_idx + 1}/{n_runs}:")
+        seed = 42 + run_idx
+        
+        # Paper Section VI.C: "k-means and RMKMC are parameter-free"
+        algorithms = {
+            "K-means": KMeansClustering(n_clusters=n_clusters, random_state=seed),
+            "RMKMC": RMKMC(n_clusters=n_clusters, random_state=seed),
+            # Paper Section VI.C: "fuzzy level is chosen as 2.5"
+            "FKM": FuzzyKMeans(n_clusters=n_clusters, fuzziness=2.5, random_state=seed),
+            # Paper Section VI.C: tuned cap parameter
+            "RSFKM": RSFKM(n_clusters=n_clusters, fuzziness=2.0, cap=best_cap, random_state=seed),
+            # Paper: URR-SL with α=1 and tuned λ
+            "URR-SL": URR_SL(n_clusters=n_clusters, alpha=1.0, lambda_reg=best_lambda_urr, 
+                            max_iter=100, random_state=seed),
+            # Paper: RURR-SL with tuned λ
+            "RURR-SL": RURR_SL(n_clusters=n_clusters, lambda_reg=best_lambda_rurr,
+                              max_iter=100, random_state=seed),
+        }
         
         for algo_name, algo in algorithms.items():
-            result = run_algorithm(algo_name, algo, X, y_true)
+            print(f"      {algo_name:12s} ...", end=" ", flush=True)
+            result = run_single_experiment(algo_name, algo, X, y_true)
             all_results[algo_name].append(result)
+            
+            if result['success']:
+                print(f"✓ ACC={result['accuracy']:.4f} NMI={result['nmi']:.4f}")
+            else:
+                print(f"✗ Failed")
     
-    # Compute statistics
-    print(f"\n  Computing statistics...")
+    # Compute statistics (Paper Table I reports mean ± std)
+    print("\n  Computing statistics...")
     stats = {}
+    
     for algo_name, results in all_results.items():
         successful_runs = [r for r in results if r['success']]
         
@@ -260,6 +434,7 @@ def run_experiments_on_dataset(
                 "time_mean": np.mean([r['runtime'] for r in successful_runs]),
                 "time_std": np.std([r['runtime'] for r in successful_runs]),
                 "success_rate": len(successful_runs) / len(results),
+                "n_success": len(successful_runs)
             }
         else:
             stats[algo_name] = {
@@ -270,6 +445,7 @@ def run_experiments_on_dataset(
                 "time_mean": 0.0,
                 "time_std": 0.0,
                 "success_rate": 0.0,
+                "n_success": 0
             }
     
     return stats
@@ -277,15 +453,10 @@ def run_experiments_on_dataset(
 
 def print_results_table(all_results: Dict[str, Dict]):
     """
-    Print formatted results table.
-    
-    Parameters
-    ----------
-    all_results : dict
-        Results for all datasets and algorithms
+    Print results table in paper format (Table I style)
     """
     print(f"\n{'='*100}")
-    print("FINAL RESULTS SUMMARY")
+    print("FINAL RESULTS (Paper Table I Format)")
     print(f"{'='*100}")
     
     for dataset_key, results in all_results.items():
@@ -294,34 +465,34 @@ def print_results_table(all_results: Dict[str, Dict]):
         
         print(f"\n{AVAILABLE_DATASETS[dataset_key]['name']}:")
         print(f"{'-'*100}")
-        print(f"{'Algorithm':<15} {'Accuracy':<20} {'NMI':<20} {'Time (s)':<20} {'Success':<10}")
+        print(f"{'Algorithm':<12} {'Accuracy':<25} {'NMI':<25} {'Time (s)':<20}")
         print(f"{'-'*100}")
         
-        for algo_name, stats in results.items():
+        for algo_name in ["K-means", "RMKMC", "FKM", "RSFKM", "URR-SL", "RURR-SL"]:
+            if algo_name not in results:
+                continue
+            
+            stats = results[algo_name]
+            
+            # Format as mean ± std (Paper Table I format)
             acc_str = f"{stats['acc_mean']:.4f} ± {stats['acc_std']:.4f}"
             nmi_str = f"{stats['nmi_mean']:.4f} ± {stats['nmi_std']:.4f}"
             time_str = f"{stats['time_mean']:.2f} ± {stats['time_std']:.2f}"
-            success_str = f"{stats['success_rate']*100:.0f}%"
             
-            print(f"{algo_name:<15} {acc_str:<20} {nmi_str:<20} {time_str:<20} {success_str:<10}")
+            print(f"{algo_name:<12} {acc_str:<25} {nmi_str:<25} {time_str:<20}")
+        
+        print()
     
     print(f"{'='*100}")
 
 
-def save_results_to_file(all_results: Dict[str, Dict], output_file: str = "results.txt"):
+def save_results_to_file(all_results: Dict[str, Dict], output_file: str = "paper_results.txt"):
     """
-    Save results to a text file.
-    
-    Parameters
-    ----------
-    all_results : dict
-        Results for all datasets and algorithms
-    output_file : str
-        Output filename
+    Save results to file in paper format
     """
     with open(output_file, 'w') as f:
         f.write("="*100 + "\n")
-        f.write("RURR-SL BENCHMARK RESULTS\n")
+        f.write("RURR-SL BENCHMARK RESULTS (Paper Methodology)\n")
         f.write("="*100 + "\n\n")
         
         for dataset_key, results in all_results.items():
@@ -331,16 +502,19 @@ def save_results_to_file(all_results: Dict[str, Dict], output_file: str = "resul
             f.write(f"\n{AVAILABLE_DATASETS[dataset_key]['name']}:\n")
             f.write(f"{AVAILABLE_DATASETS[dataset_key]['description']}\n")
             f.write("-"*100 + "\n")
-            f.write(f"{'Algorithm':<15} {'Accuracy':<20} {'NMI':<20} {'Time (s)':<20} {'Success':<10}\n")
+            f.write(f"{'Algorithm':<12} {'Accuracy':<25} {'NMI':<25} {'Time (s)':<20}\n")
             f.write("-"*100 + "\n")
             
-            for algo_name, stats in results.items():
+            for algo_name in ["K-means", "RMKMC", "FKM", "RSFKM", "URR-SL", "RURR-SL"]:
+                if algo_name not in results:
+                    continue
+                
+                stats = results[algo_name]
                 acc_str = f"{stats['acc_mean']:.4f} ± {stats['acc_std']:.4f}"
                 nmi_str = f"{stats['nmi_mean']:.4f} ± {stats['nmi_std']:.4f}"
                 time_str = f"{stats['time_mean']:.2f} ± {stats['time_std']:.2f}"
-                success_str = f"{stats['success_rate']*100:.0f}%"
                 
-                f.write(f"{algo_name:<15} {acc_str:<20} {nmi_str:<20} {time_str:<20} {success_str:<10}\n")
+                f.write(f"{algo_name:<12} {acc_str:<25} {nmi_str:<25} {time_str:<20}\n")
             
             f.write("\n")
     
@@ -349,118 +523,39 @@ def save_results_to_file(all_results: Dict[str, Dict], output_file: str = "resul
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run clustering experiments on selected datasets",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Available datasets:
-  3cluster      - 3-Cluster Gaussian (synthetic)
-  multicluster  - Multicluster (synthetic)
-  colon         - COLON gene expression (CSV)
-  glioma        - GLIOMA gene expression
-  att_faces     - AT&T face database
-  gt_faces      - Georgia Tech faces
-  flower17      - Oxford 17 flowers
-
-Examples:
-  # Run on all datasets
-  python run_experiments.py --all
-  
-  # Run on specific datasets
-  python run_experiments.py --datasets 3cluster glioma att_faces
-  
-  # Run with custom parameters
-  python run_experiments.py --datasets 3cluster --runs 5 --lambda 10.0
-        """
+        description="Run clustering experiments following exact paper methodology",
+        formatter_class=argparse.RawDescriptionHelpFormatter
     )
     
-    parser.add_argument(
-        '--datasets',
-        nargs='+',
-        choices=list(AVAILABLE_DATASETS.keys()),
-        help='Datasets to run experiments on'
-    )
-    parser.add_argument(
-        '--all',
-        action='store_true',
-        help='Run on all available datasets'
-    )
-    parser.add_argument(
-        '--runs',
-        type=int,
-        default=10,
-        help='Number of runs per dataset (default: 10)'
-    )
-    parser.add_argument(
-        '--lambda',
-        type=float,
-        default=1.0,
-        dest='lambda_reg',
-        help='Regularization parameter for URR/RURR (default: 1.0)'
-    )
-    parser.add_argument(
-        '--urr-alpha',
-        type=float,
-        default=1.0,
-        help='Fixed alpha for URR-SL (default: 1.0)'
-    )
-    parser.add_argument(
-        '--output',
-        type=str,
-        default='results.txt',
-        help='Output file for results (default: results.txt)'
-    )
-    parser.add_argument(
-        '--list',
-        action='store_true',
-        help='List available datasets and exit'
-    )
+    parser.add_argument('--datasets', nargs='+', choices=list(AVAILABLE_DATASETS.keys()),
+                       help='Datasets to run')
+    parser.add_argument('--all', action='store_true', help='Run on all datasets')
+    parser.add_argument('--runs', type=int, default=10, help='Number of runs (paper uses 10)')
+    parser.add_argument('--no-tune', action='store_true', help='Skip parameter tuning')
+    parser.add_argument('--output', type=str, default='paper_results.txt', help='Output file')
     
     args = parser.parse_args()
     
-    # List datasets and exit
-    if args.list:
-        print("\nAvailable datasets:")
-        print("="*70)
-        for key, info in AVAILABLE_DATASETS.items():
-            print(f"  {key:<15} - {info['name']}")
-            print(f"  {'':15}   {info['description']}")
-        print("="*70)
-        return
-    
-    # Determine which datasets to run
+    # Determine datasets (prompt user before starting)
     if args.all:
-        datasets_to_run = list(AVAILABLE_DATASETS.keys())
+        initial_selection = list(AVAILABLE_DATASETS.keys())
     elif args.datasets:
-        datasets_to_run = args.datasets
+        initial_selection = args.datasets
     else:
-        # Interactive mode
-        print("\nAvailable datasets:")
-        for i, (key, info) in enumerate(AVAILABLE_DATASETS.items(), 1):
-            print(f"  {i}. {key:<15} - {info['name']}")
-        
-        print("\nEnter dataset numbers (space-separated) or 'all': ", end="")
-        user_input = input().strip()
-        
-        if user_input.lower() == 'all':
-            datasets_to_run = list(AVAILABLE_DATASETS.keys())
-        else:
-            try:
-                indices = [int(x) - 1 for x in user_input.split()]
-                dataset_keys = list(AVAILABLE_DATASETS.keys())
-                datasets_to_run = [dataset_keys[i] for i in indices]
-            except (ValueError, IndexError):
-                print("Invalid input. Exiting.")
-                return
+        initial_selection = ['3cluster', 'glioma', 'att_faces']  # Default subset
     
-    # Print experiment configuration
-    print("\n" + "="*70)
-    print("EXPERIMENT CONFIGURATION")
-    print("="*70)
+    datasets_to_run = prompt_user_for_datasets(initial_selection)
+    
+    # Print configuration
+    print("\n" + "="*80)
+    print("EXPERIMENT CONFIGURATION (Following Paper Methodology)")
+    print("="*80)
     print(f"Datasets: {', '.join(datasets_to_run)}")
-    print(f"Runs per dataset: {args.runs}")
-    print(f"Lambda (regularization): {args.lambda_reg}")
-    print(f"URR-SL alpha: {args.urr_alpha}")
-    print("="*70)
+    print(f"Runs per dataset: {args.runs} (Paper uses 10)")
+    print(f"Parameter tuning: {'Yes' if not args.no_tune else 'No'} (Paper does tuning)")
+    print(f"λ grid: {LAMBDA_GRID}")
+    print(f"RSFKM cap grid: {RSFKM_CAP_GRID}")
+    print("="*80)
     
     # Run experiments
     all_results = {}
@@ -468,8 +563,7 @@ Examples:
         results = run_experiments_on_dataset(
             dataset_key,
             n_runs=args.runs,
-            lambda_reg=args.lambda_reg,
-            urr_alpha=args.urr_alpha
+            tune_params=not args.no_tune
         )
         all_results[dataset_key] = results
     
@@ -477,9 +571,7 @@ Examples:
     print_results_table(all_results)
     save_results_to_file(all_results, args.output)
     
-    print(f"\n✓ Experiments completed!")
 
 
 if __name__ == "__main__":
     main()
-
