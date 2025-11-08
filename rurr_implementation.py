@@ -1,6 +1,6 @@
 
 import numpy as np
-from scipy.linalg import svd, sqrtm
+from scipy.linalg import svd
 from scipy.optimize import linear_sum_assignment
 from sklearn.metrics import normalized_mutual_info_score
 from sklearn.datasets import make_blobs
@@ -55,9 +55,14 @@ class RURR_SL:
         """
         Update Z using SVD (Theorem 1)
         Z = S_t^(-1/2) U V^T where M = U S V^T
+        Uses eigendecomposition for numerical stability
         """
+        # Compute S_t^(-1/2) using eigendecomposition (more stable than sqrtm(inv(S_t)))
+        eigvals, eigvecs = np.linalg.eigh(S_t)
+        eigvals = np.maximum(eigvals, 1e-10)  # Clip small eigenvalues for stability
+        S_t_inv_sqrt = eigvecs @ np.diag(1.0 / np.sqrt(eigvals)) @ eigvecs.T
+        
         # Compute M = S_t^(-1/2) X H Y
-        S_t_inv_sqrt = sqrtm(np.linalg.inv(S_t))
         M = S_t_inv_sqrt @ X @ H @ Y
         
         # Compact SVD
@@ -91,17 +96,17 @@ class RURR_SL:
     def _newton_method_sigma(self, p_i, alpha, max_iter_newton=20):
         """
         Solve for σ̄ using Newton method
-        f(σ̄) = (1/c)Σ(σ̄ - p_ij)_+ - σ̄ = 0
+        Paper's equation (19): f(σ̄) = (1/c) * Σ(σ̄ - p_ij)_+ - σ̄ = 0
         """
         c = len(p_i)
         sigma_bar = np.mean(p_i)  # Initial guess
         
         for _ in range(max_iter_newton):
-            # f(σ̄) = (1/c)Σ(σ̄ - p_ij)_+ - σ̄
+            # f(σ̄) = (1/c) * Σ(σ̄ - p_ij)_+ - σ̄
             diff = sigma_bar - p_i
             f = np.mean(np.maximum(diff, 0)) - sigma_bar
             
-            # f'(σ̄) = (1/c)Σ1{σ̄ > p_ij} - 1
+            # f'(σ̄) = (1/c) * Σ1{σ̄ > p_ij} - 1
             f_prime = np.mean((diff > 0).astype(float)) - 1
             
             if abs(f_prime) < 1e-10:
@@ -120,7 +125,9 @@ class RURR_SL:
     def _update_Y(self, X, Z, b, alpha):
         """
         Update soft label Y
-        For each sample i: y_i = (p_i - σ̄)_+
+        Paper's Algorithm 1 (line 494-498): p_i = v_i + (α/c)*1_c - (1^T_c*v_i/c)*1_c
+        Paper's equation (17): y^(α)_ij = (p_ij - σ̄)_+
+        Paper's Algorithm 1 (line 505-507): Y = (1/α) * Y^(α)
         """
         n = X.shape[1]
         V = X.T @ Z + np.ones((n, 1)) @ b.T
@@ -130,30 +137,30 @@ class RURR_SL:
         for i in range(n):
             v_i = V[i, :]
             
-            # Compute p_i
+            # Compute p_i as in paper's Algorithm 1 (line 494-498)
             p_i = v_i + (alpha / self.n_clusters) - np.mean(v_i)
             
             # Solve for σ̄ using Newton method
             sigma_bar = self._newton_method_sigma(p_i, alpha)
             
-            # Update y_i^(α) = (p_i - σ̄)_+
+            # Update y_i^(α) = (p_i - σ̄)_+ as in equation (17)
             Y_alpha[i, :] = np.maximum(p_i - sigma_bar, 0)
         
-        # Y = (1/α)Y^(α)
+        # Y = (1/α) * Y^(α) as in Algorithm 1 (line 505-507)
         Y = Y_alpha / (alpha + 1e-10)
         
-        # Normalize to ensure Y1_c = 1_n
+        # Normalize to ensure Y1_c = 1_n (safety check)
         row_sums = Y.sum(axis=1, keepdims=True)
-        Y = Y / (row_sums + 1e-10)
+        row_sums = np.maximum(row_sums, 1e-10)
+        Y = Y / row_sums
         
         return Y
     
     def _compute_objective(self, X, Z, b, Y, alpha, H):
         """Compute objective function value"""
         n = X.shape[1]
+        # Paper's formulation (Eq. 7): ||X^T Z + 1_n b^T - αY||_F^2 + λ||Z||_F^2
         term1 = np.linalg.norm(X.T @ Z + np.ones((n, 1)) @ b.T - alpha * Y, 'fro')**2
-        term1 = np.trace((X.T @ Z + np.ones((n, 1)) @ b.T - alpha * Y).T @ 
-                        H @ (X.T @ Z + np.ones((n, 1)) @ b.T - alpha * Y))
         term2 = self.lambda_reg * np.linalg.norm(Z, 'fro')**2
         return term1 + term2
     
@@ -256,11 +263,24 @@ class URR_SL:
         return Y
     
     def _update_Z(self, X, Y, S_t, H):
-        """Update Z using SVD"""
-        S_t_inv_sqrt = sqrtm(np.linalg.inv(S_t))
+        """
+        Update Z using SVD
+        Uses eigendecomposition for numerical stability
+        """
+        # Compute S_t^(-1/2) using eigendecomposition (more stable than sqrtm(inv(S_t)))
+        eigvals, eigvecs = np.linalg.eigh(S_t)
+        eigvals = np.maximum(eigvals, 1e-10)  # Clip small eigenvalues for stability
+        S_t_inv_sqrt = eigvecs @ np.diag(1.0 / np.sqrt(eigvals)) @ eigvecs.T
+        
+        # Compute M = S_t^(-1/2) X H Y
         M = S_t_inv_sqrt @ X @ H @ Y
+        
+        # Compact SVD
         U, S, Vt = svd(M, full_matrices=False)
+        
+        # Z = S_t^(-1/2) U V^T
         Z = S_t_inv_sqrt @ U @ Vt
+        
         return Z
     
     def _update_b(self, Z, X, Y):
@@ -271,13 +291,19 @@ class URR_SL:
         return b
     
     def _newton_method_sigma(self, p_i, max_iter_newton=20):
-        """Solve for σ̄ using Newton method"""
+        """
+        Solve for σ̄ using Newton method
+        Paper's equation (19): f(σ̄) = (1/c) * Σ(σ̄ - p_ij)_+ - σ̄ = 0
+        """
         c = len(p_i)
-        sigma_bar = np.mean(p_i)
+        sigma_bar = np.mean(p_i)  # Initial guess
         
         for _ in range(max_iter_newton):
+            # f(σ̄) = (1/c) * Σ(σ̄ - p_ij)_+ - σ̄
             diff = sigma_bar - p_i
             f = np.mean(np.maximum(diff, 0)) - sigma_bar
+            
+            # f'(σ̄) = (1/c) * Σ1{σ̄ > p_ij} - 1
             f_prime = np.mean((diff > 0).astype(float)) - 1
             
             if abs(f_prime) < 1e-10:
@@ -293,7 +319,12 @@ class URR_SL:
         return sigma_bar
     
     def _update_Y(self, X, Z, b):
-        """Update soft label Y"""
+        """
+        Update soft label Y
+        Paper's Algorithm 1 (line 494-498): p_i = v_i + (α/c)*1_c - (1^T_c*v_i/c)*1_c
+        Paper's equation (17): y^(α)_ij = (p_ij - σ̄)_+
+        Paper's Algorithm 1 (line 505-507): Y = (1/α) * Y^(α)
+        """
         n = X.shape[1]
         V = X.T @ Z + np.ones((n, 1)) @ b.T
         
@@ -301,21 +332,31 @@ class URR_SL:
         
         for i in range(n):
             v_i = V[i, :]
+            
+            # Compute p_i as in paper's Algorithm 1 (line 494-498)
             p_i = v_i + (self.alpha / self.n_clusters) - np.mean(v_i)
+            
+            # Solve for σ̄ using Newton method
             sigma_bar = self._newton_method_sigma(p_i)
+            
+            # Update y_i^(α) = (p_i - σ̄)_+ as in equation (17)
             Y_alpha[i, :] = np.maximum(p_i - sigma_bar, 0)
         
+        # Y = (1/α) * Y^(α) as in Algorithm 1 (line 505-507)
         Y = Y_alpha / (self.alpha + 1e-10)
+        
+        # Normalize to ensure Y1_c = 1_n (safety check)
         row_sums = Y.sum(axis=1, keepdims=True)
-        Y = Y / (row_sums + 1e-10)
+        row_sums = np.maximum(row_sums, 1e-10)
+        Y = Y / row_sums
         
         return Y
     
     def _compute_objective(self, X, Z, b, Y, H):
         """Compute objective function value"""
         n = X.shape[1]
-        term1 = np.trace((X.T @ Z + np.ones((n, 1)) @ b.T - self.alpha * Y).T @ 
-                        H @ (X.T @ Z + np.ones((n, 1)) @ b.T - self.alpha * Y))
+        # Paper's formulation: ||X^T Z + 1_n b^T - αY||_F^2 + λ||Z||_F^2
+        term1 = np.linalg.norm(X.T @ Z + np.ones((n, 1)) @ b.T - self.alpha * Y, 'fro')**2
         term2 = self.lambda_reg * np.linalg.norm(Z, 'fro')**2
         return term1 + term2
     
@@ -393,11 +434,11 @@ def plot_clustering_results(X, y_true, y_pred_kmeans, y_pred_urr, y_pred_rurr):
     axes[1].set_xlabel('Feature 1')
     
     axes[2].scatter(X[0, :], X[1, :], c=y_pred_urr, cmap='viridis', s=50)
-    axes[2].set_title('URR-SL (α=1)')
+    axes[2].set_title('URR-SL (alpha=1)')
     axes[2].set_xlabel('Feature 1')
     
     axes[3].scatter(X[0, :], X[1, :], c=y_pred_rurr, cmap='viridis', s=50)
-    axes[3].set_title('RURR-SL (adaptive α)')
+    axes[3].set_title('RURR-SL (adaptive alpha)')
     axes[3].set_xlabel('Feature 1')
     
     plt.tight_layout()
@@ -409,7 +450,7 @@ def plot_convergence(rurr_history, urr_history):
     fig, ax = plt.subplots(figsize=(10, 6))
     
     ax.plot(rurr_history, label='RURR-SL', linewidth=2, marker='o', markersize=4)
-    ax.plot(urr_history, label='URR-SL (α=1)', linewidth=2, marker='s', markersize=4)
+    ax.plot(urr_history, label='URR-SL (alpha=1)', linewidth=2, marker='s', markersize=4)
     
     ax.set_xlabel('Iteration', fontsize=12)
     ax.set_ylabel('Objective Value', fontsize=12)
@@ -462,7 +503,7 @@ if __name__ == "__main__":
     print(f"   K-means - Accuracy: {acc_kmeans:.4f}, NMI: {nmi_kmeans:.4f}")
     
     # Run URR-SL
-    print("\n3. Running URR-SL (α=1)...")
+    print("\n3. Running URR-SL (alpha=1)...")
     urr = URR_SL(n_clusters=3, alpha=1.0, lambda_reg=1.0, max_iter=100)
     urr.fit(X)
     y_pred_urr = urr.predict()
@@ -471,14 +512,14 @@ if __name__ == "__main__":
     print(f"   URR-SL - Accuracy: {acc_urr:.4f}, NMI: {nmi_urr:.4f}")
     
     # Run RURR-SL
-    print("\n4. Running RURR-SL (adaptive α)...")
+    print("\n4. Running RURR-SL (adaptive alpha)...")
     rurr = RURR_SL(n_clusters=3, lambda_reg=1.0, max_iter=100)
     rurr.fit(X)
     y_pred_rurr = rurr.predict()
     acc_rurr = clustering_accuracy(y_true, y_pred_rurr)
     nmi_rurr = normalized_mutual_info_score(y_true, y_pred_rurr)
     print(f"   RURR-SL - Accuracy: {acc_rurr:.4f}, NMI: {nmi_rurr:.4f}")
-    print(f"   Optimal α: {rurr.alpha:.4f}")
+    print(f"   Optimal alpha: {rurr.alpha:.4f}")
     
     # Summary
     print("\n" + "="*60)
@@ -487,7 +528,7 @@ if __name__ == "__main__":
     print(f"{'Method':<20} {'Accuracy':<15} {'NMI':<15}")
     print("-"*60)
     print(f"{'K-means':<20} {acc_kmeans:<15.4f} {nmi_kmeans:<15.4f}")
-    print(f"{'URR-SL (α=1)':<20} {acc_urr:<15.4f} {nmi_urr:<15.4f}")
+    print(f"{'URR-SL (alpha=1)':<20} {acc_urr:<15.4f} {nmi_urr:<15.4f}")
     print(f"{'RURR-SL (adaptive)':<20} {acc_rurr:<15.4f} {nmi_rurr:<15.4f}")
     print("="*60)
     
@@ -509,10 +550,10 @@ if __name__ == "__main__":
     plt.savefig('soft_labels.png', dpi=300, bbox_inches='tight')
     print("   Saved: soft_labels.png")
     
-    print("\n✓ Implementation complete!")
+    print("\n[OK] Implementation complete!")
     print("  Key findings verified:")
     print(f"  - RURR-SL achieves {(acc_rurr-acc_urr)*100:.2f}% improvement over URR-SL")
     print(f"  - Both methods outperform K-means")
-    print(f"  - Automatic scaling α={rurr.alpha:.4f} found by RURR-SL")
+    print(f"  - Automatic scaling alpha={rurr.alpha:.4f} found by RURR-SL")
     
     plt.show()

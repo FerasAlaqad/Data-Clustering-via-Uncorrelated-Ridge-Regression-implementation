@@ -1,0 +1,901 @@
+450
+ IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 32, NO. 1, JANUARY 2021
+ Data Clustering via Uncorrelated Ridge Regression
+ Rui Zhang
+ , Member, IEEE, Xuelong Li
+ , Fellow, IEEE, Tong Wu ,andYiZhao
+ Abstract—Ridge regression is frequently utilized by both supervised
+ and semisupervised learnings. However, the trivial solution might occur,
+ when ridge regression is directly applied for clustering. To address this
+ issue, an uncorrelated constraint is introduced to the ridge regression with
+ embedding the manifold structure. In particular, we choose uncorrelated
+ constraint over orthogonal constraint, since the closed-form solution can
+ be obtained correspondingly. In addition to the proposed uncorrelated
+ ridge regression, a soft pseudo label is utilized with ℓ1 ball constraint
+ for clustering. Moreover, a brand new strategy, i.e., a rescaled technique,
+ is proposed such that optimal scaling within the uncorrelated constraint
+ can be achieved automatically to avoid the inconvenience of tuning it
+ manually. Equipped with the rescaled uncorrelated ridge regression with
+ the soft label, a novel clustering method can be developed based on
+ solving the related clustering model. Consequently, extensive experiments
+ are provided to illustrate the effectiveness of the proposed method.
+ , Student Member, IEEE
+ More specifically, k-means is frequently exploited to serve as
+ a metric for evaluating the performance of unsupervised feature
+ selection [17]–[22] methods. Another example to illustrate here is
+ fuzzy k-means [23], [24]. The distinction between k-means and fuzzy
+ k-means reflects on the membership. In other words, k-means is a
+ hard clustering method, while fuzzy k-means [25], [26] is a soft one,
+ via which each data point is assigned with degrees of membership
+ in all clusters. To sum up, k-means is fundamentally significant for
+ being a basic clustering method.
+ Index Terms—Clustering, rescaling, ridge regression, uncorre
+lated constraint.
+ I. INTRODUCTION
+ Speedy development of industry leads to an increasing amount of
+ data to deal with. Accordingly, how to efficiently examine these data
+ serves as the mainstream for a spectrum of real-world applications.
+ Particularly, a large number of real-world data usually are generated
+ without the label information. In other words, it is either laborious
+ or expensive to obtain the label information in reality. Therefore, the
+ issue concerning clustering the given data points into certain clusters
+ performs significantly for the data investigation in multiple fields.
+ Recently, a lot of works regarding clustering approaches
+ [1]–[6] have been proposed. Admittedly, these works mentioned
+ above do contribute to some extent. Some of them may lead to
+ satisfactory clustering performance under specially designated stipu
+lation. However, most of the current unsupervised learning techniques
+ are associated with k-means [7] to some extent by either utilizing
+ it as a metric or incorporating it into the learning process. Due to
+ the efficiency and simplicity, the k-means type clustering methods
+ have been widely investigated. To visualize the cluster structures of
+ data, self-organizing map approaches [8], [9] have been researched.
+ In addition, clustering algorithms such as spectral clustering
+ [10]–[13], support vector clustering [14], and kernel-based clustering
+ [15], [16] have been proposed to examine nonlinear cluster structures.
+ Manuscript received March 3, 2019; revised July 20, 2019 and
+ November 14, 2019; accepted February 23, 2020. Date of publication April 7,
+ 2020; date of current version January 5, 2021. This work was supported in part
+ by the National Natural Science Foundation of China under Grant 61871470
+ and Grant U1801262, in part by the China Postdoctoral Science Foundation
+ under Grant 2018M643765 and Grant 2019T120960, and in part by the Xi’an
+ Postdoctoral Innovation Base Funding. (Corresponding author: Xuelong Li.)
+ Rui Zhang and Xuelong Li are with the School of Computer Science
+ and the Center for OPTical IMagery Analysis and Learning (OPTIMAL),
+ Northwestern Polytechnical University, Xi’an 710072, China (e-mail:
+ ruizhang8633@gmail.com; xuelong_li@nwpu.edu.cn).
+ Tong Wu is with the School of Mathematics and Statistics, Xi’an Jiaotong
+ University, Xi’an 710049, China (e-mail: wutong034@stu.xjtu.edu.cn).
+ Yi Zhao is with the Department of Computer Science and Tech
+nology, Tsinghua University, Beijing 100084, China (e-mail: zhaoyi16@
+ mails.tsinghua.edu.cn).
+ Color versions of one or more of the figures in this article are available
+ online at https://ieeexplore.ieee.org.
+ Digital Object Identifier 10.1109/TNNLS.2020.2978755
+ By sharing the similar least square form with k-means, ridge
+ regression [27]–[29] on the other hand is hardly applied to direct
+ clustering due to the trivial solution it will trigger. In other words, all
+ the data points are grouped to the same cluster, while the subspace is a
+ null space. According to its efficiency under both semisupervised and
+ supervised learnings, it is unfortunate that ridge regression cannot be
+ directly investigated from the perspective of unsupervised learning.
+ To address this issue, two common criteria can be adopted to prevent
+ the potential trivial solution: 1) constraining the hard binary label
+ matrix to be full rank and 2) constraining the subspace to avoid the
+ potential zero space.
+ Motivation and Contribution: To apply ridge regression for cluster
+ing successfully and effectively, the previously mentioned options are
+ taken into account. There are two common constraints with manifold
+ structure, which are known as orthogonal and uncorrelated con
+straints, respectively. The uncorrelated constraint [30] is often utilized
+ to ensure the data on the subspace to be statistically uncorrelated.
+ In this brief, we choose an uncorrelated constraint over an orthogonal
+ constraint since ridge regression under uncorrelated constraint has
+ the closed-form solution, while ridge regression under orthogonal
+ constraint does not. In sum, the contributions of this brief are listed
+ as the following items.
+ 1) The manifold structure of uncorrelated constraint is incorpo
+rated into the subspace to avoid the potential trivial solution to
+ the ridge regression clustering model.
+ 2) Soft label is utilized with 1 ball constraint in the uncorrelated
+ ridge regression for the full rank label matrix.
+ 3) Anovel rescaled strategy is proposed for the uncorrelated ridge
+ regression with soft label (URR-SL), such that optimal scaling
+ in the uncorrelated constraint can be obtained automatically
+ instead of conventional tuning technique.
+ Consequently, the modified ridge regression can be successfully
+ applied to the clustering via obtaining the closed form of the
+ associated subspace with manifold structure.
+ Notation: Suppose W = [wij]i×j ∈ Rd× c, Frobenius-norm of
+ W is defined as W F =(Tr(WTW))1/2 = ( d
+ i=1 
+c
+ j=1w2
+ ij)1/2. 1i
+ and 0ij denote 1i = [1,...,1]T ∈ Ri× 1 and 0ij = [0]i× j =
+ [0i1,...,0i1] ∈Ri× j, respectively. I denotes the identity matrix.
+ The Karush–Kuhn–Tucker (KKT) conditions (also known as the
+ Kuhn–Tucker conditions) are first-order necessary conditions for a
+ solution in nonlinear programming to be optimal, provided that some
+ regularity conditions are satisfied. For any given real function h(x),
+ nonlinear operator (·)+ is defined as (h(x))+ =max(h(x),0).Foran
+ arbitrary matrix K ∈ Rp× q, K ≥ 0ij denotes that K element-wisely
+ satisfies the condition, i.e., any element of K satisfies Kij ≥ 0 ∀i, j.
+ 2162-237X © 2020 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+ See https://www.ieee.org/publications/rights/index.html for more information.
+ Authorized licensed use limited to: ULAKBIM UASL - Hacettepe Universitesi. Downloaded on November 03,2025 at 18:41:13 UTC from IEEE Xplore.  Restrictions apply. 
+IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 32, NO. 1, JANUARY 2021
+ 451
+ II. POTENTIALPROBLEMWHENRIDGEREGRESSIONIS
+ DIRECTLYAPPLIEDFOR CLUSTERING
+ Given the data set X ={xi|xi ∈ Rd× 1; i = 1,2,...,n} and
+ related data matrix X =[x1,x2,...,xn] ∈Rd× n, data points are
+ distributed into c different clusters with dimension d and data number
+ n (d ≥ c).
+ As for the supervised learning, i.e., ground truth label L is
+ pre-given for the associated input data X, ridge regression can be
+ represented as
+ min
+ W,e 
+XTW+1neT −L 2
+ F +λ W 2
+ F
+ (1)
+ where W ∈ Rd× c is the subspace, e ∈ Rc× 1 is the bias, and
+ L ∈ {0,1}n× c is the binary label matrix with the regularization
+ parameter λ ∈ R. The purpose of the supervised problem in (1) is
+ to find the optimal subspace W, which projects the data onto the
+ same space of the label matrix L, such that the least square fitting
+ error is obtained.
+ According to the supervised ridge regression in (1), when direct
+ clustering is applied, unsupervised ridge regression could be repre
+sented as
+ min
+ W,e,Y 
+XTW+1neT −Y 2
+ F +λ W 2
+ F ≥0
+ s.t. Y ∈{0,1}n× c,Y1c = 1n
+ (2)
+ where the binary pseudo label matrix Y ∈ {0,1}n× c serves as
+ an optimization variable with satisfying Y1c = 1n, namely, each
+ row of Y has only one 1, where the rest of the elements in each
+ row are 0. In particular, cluster number c has to be known in
+ advance for initializing both W and Y. As for the clustering model
+ in (2), the special case regarding W = 0dc, e = [1,0,...,0]T,
+ and Y =[1n,0n1,...,0n1] serves as the solution to problem (2) by
+ reaching its lower bound 0 as
+ XTW+1neT −Y 2
+ F +λ W 2
+ F
+ = XT0dc +1n[1,0,...,0]−[1n,0n1,...,0n1] 2
+ F + λ0
+ = 0.
+ (3)
+ Obviously, it is irrational that all the data points are grouped to
+ the same cluster based on this pseudo label Y =[1n,0n1,...,0n1].
+ Therefore, unsupervised ridge regression (2) leads to the trivial
+ solution, i.e., projection matrix W is null/zero matrix and the rank
+ of label matrix Y is 1 due to the unconstrained variables. In other
+ words, ridge regression cannot be directly applied for clustering.
+ III. UNCORRELATEDRIDGE REGRESSIONWITHSOFTLABEL
+ To avoid the potential trivial solution previously mentioned,
+ i.e., W = 0dc, it is natural to constrain subspace W to be full rank.
+ Accordingly, the discussion leads to two general options: orthogonal
+ constraint [31] WTW = (1/α2)I and uncorrelated constraint [30]
+ WTStW =(1/α2)I,whereSt = XHXT is the total scatter matrix and
+ α is the scaling term with the centering matrix H = I−(1/n)1n1nT ∈
+ Rn× n. It is worth noting that both of the constraints perform with
+ manifold structure, such that the structure of data remains unchanged
+ during the projection. In this brief, we choose uncorrelated constraint
+ over orthogonal constraint due to the simple fact that orthogonal con
+strained ridge regression or known as orthogonal least square regres
+sion (since regularization W 2
+ F vanishes) does not have closed-form
+ solution with respect to W. In addition, The conventional uncorrelated
+ constraint is usually utilized to find the most uncorrelated data in
+ the subspace, such that the projected dimensions are orthonormal
+ to ensure that the data on the subspace are uncorrelated to each
+ other. More specifically, the uncorrelated data structure can be further
+ explored on the subspace. Nevertheless, when the number of samples
+ is less than features [32], the total scatter matrix St is positive
+ semidefinite. The required inverse operation of the scatter matrix is
+ unavailable, such that model under uncorrelated constraint might lead
+ to potential trivial solutions. Therefore, in this brief, the total scatter
+ matrix is modified as St = XHXT+λI to ensure a positive definite St.
+ Moreover, we utilize soft label with 1 ball constraint instead of hard
+ binary label, since soft label is more representative and practical for
+ real-world applications.
+ Accordingly, the URR-SL problem can be proposed for clustering
+ as
+ min
+ W,e,Y 
+XTW+1neT −Y 2
+ F +λ W 2
+ F
+ s.t. WTStW = 1
+ α2
+ I, Y1c = 1n, Y ≥ 0nc
+ where the total scatter matrix St = XHXT +λI ∈ Rd× d.
+ IV. RESCALEDURR-SLFORTHEOPTIMALSCALING
+ (4)
+ Although URR-SL in (4) can prevent the trivial case of cluster
+ing as represented in (2), an existing deficiency of the proposed
+ URR-SL in (4) is that scaling α in the uncorrelated constraint can
+ only be selected via conventional tuning technique. Note that the
+ uncorrelated constraint WTStW = (1/α2)I in (4) can be rewritten
+ as ((1/α)ZT)St((1/α)Z) = (1/α2)I ⇒ ZTStZ = I under Z = αW,
+ then URR-SL in (4) can be rescaled into the following equivalent
+ counterpart:
+ min
+ Z,e,Y 
+XT 1
+ αZ +1neT −Y 
+2
+ F
+ +λ 1
+ αZ 2
+ F
+ = min
+ 1
+ Z,b,Y
+ α2 
+XTZ+1nbT −αY 2
+ F+ λ
+ α2 
+Z 2
+ F
+ ⇒min
+ Z,b,Y 
+XTZ +1nbT −αY 2
+ F+λ Z 2
+ F
+ s.t. ZTStZ = I, Y1c = 1n, Y ≥ 0nc
+ (5)
+ where the bias b = αe is also a free variable as the bias e in (4) with
+ the subspace Z ∈ Rd× c. Based on the abovementioned rescaled dual
+ problem, we further attempt to achieve the optimal scaling automat
+ically by optimizing α as a variable in (5). Accordingly, the rescaled
+ URR-SL (RURR-SL) problem can be eventually formulated as
+ min
+ Z,α,b,Y 
+XTZ + 1nbT −αY 2
+ F +λ Z 2
+ F
+ s.t. ZTStZ = I, Y1c = 1n, Y ≥ 0nc
+ which can be utilized for the direct clustering.
+ V. OPTIMIZATIONMETHODOLOGYWITH
+ THEORETICALANALYSIS
+ (6)
+ How to solve the proposed clustering model, i.e., RURR-SL in (6),
+ then takes the first priority. Hereinafter, coordinate blocking method,
+ i.e., alternating method, is employed.
+ A. Optimize Y With Fixing Z, b, and α
+ When Z, b,andα are fixed, problem (6) can be rewritten as
+ min
+ Y1c=1n,Y≥0nc 
+V − αY 2
+ F
+ which is equivalent to
+ min
+ Y(α)1c=α1n,Y(α)≥0nc 
+V − Y(α) 2
+ F
+ (7)
+ (8)
+ Authorized licensed use limited to: ULAKBIM UASL - Hacettepe Universitesi. Downloaded on November 03,2025 at 18:41:13 UTC from IEEE Xplore.  Restrictions apply. 
+452 IEEETRANSACTIONSONNEURALNETWORKSANDLEARNINGSYSTEMS,VOL.32,NO.1, JANUARY2021
+ whereV=XTZ+1nbT andY(α)=αY.Due tothe independence
+ of eachsoft label, i.e., each rowvector ofY, problem(8) canbe
+ individuallysolvedby
+ min
+ (y(α)
+ i )T1c=α,y(α)
+ i ≥0c1
+ 1
+ 2 y(α)
+ i −vi 2
+ 2,(1≤i≤n) (9)
+ wherey(α)
+ i ∈Rc×1 andvi ∈Rc×1 are the ithcolumns of (Y(α))T
+ andVT, respectively.Hence, theLagrangianfunctionof (9)canbe
+ representedas
+ L=1
+ 2 y(α)
+ i −vi
+ 2
+ 2
+ −β y(α)
+ i
+ T
+ 1c−α −σTy(α)
+ i (10)
+ whereβ∈Randσ∈Rc×1≥0c1areLagrangianmultipliers.Accord
+ingtoLin(10), associatedKKTconditionscanbeillustratedas
+ ⎧
+ ⎪ ⎪ ⎪ ⎨
+ ⎪ ⎪ ⎪ ⎩
+ ∀j, y(α)
+ ij −vij−β−σj=0
+ ∀j, y(α)
+ ij ≥0
+ ∀j, σj≥0
+ ∀j, y(α)
+ ij σj=0.
+ (11)
+ Accordingtotheconstraint(y(α)
+ i )T1c=αin(9)and(11),wehave
+ β=α−1T
+ cvi−1T
+ cσ
+ c . (12)
+ Basedon(11)and(12),wecouldfurtherachievethat
+ y(α)
+ i =vi+α
+ c 1c−1T
+ cvi
+ c 1c−1T
+ cσ
+ c 1c+σ. (13)
+ Denote ¯σ=(1T
+ cσ/c)andpi=vi+(α/c)1c−(1T
+ cvi/c)1c, then(13)
+ couldbereformulatedinto
+ y(α)
+ i =pi−¯σ1c+σ. (14)
+ Inotherwords, (14)couldbeelement-wiselyillustratedas
+ y(α)
+ ij =pij−¯σ+σj ∀j. (15)
+ Accordingto(11)and(15), thediscussionwillbefurtherdecom
+posedintothefollowingcases:
+ ⎧
+ ⎪ ⎨
+ ⎪ ⎩
+ Case1:y(α)
+ ij >0,σj=0⇔y(α)
+ ij =pij−¯σ>0
+ Case2:y(α)
+ ij =0,σj>0⇔−σj=pij−¯σ<0
+ Case3:y(α)
+ ij =σj=0⇔pij−¯σ=0.
+ (16)
+ From(16), theclosed-formsolutionscanbesimplysummarizedas
+ y(α)
+ ij =(pij−¯σ)+
+ σj=(¯σ−pij)+. (17)
+ From(17), it is easy tonotice that y(α)
+ ij canbedetermined if and
+ only if ¯σ canbeobtained.Actually, basedon theformulasofboth
+ ¯σandσ,wefurtherhave
+ ¯σ= 1T
+ cσ
+ c =
+ c
+ j=1σj
+ c
+ = 1
+ c
+ c
+ j=1
+ (¯σ−pij)+. (18)
+ Inorder tosolve ¯σ in(18),weintroducethefollowingfunction:
+ f(¯σ)=1
+ c
+ c
+ j=1
+ (¯σ−pij)+−¯σ. (19)
+ Apparently,solving(18) isequivalent tofindingtherootoff(¯σ)=0
+ in(19),whichcanbeeasilyobtainedbyNewtonmethodas
+ ¯σt+1=¯σt− f(¯σt)
+ f	(¯σt) (20)
+ wheret represents thetthiteration.
+ B.OptimizeZ,b,andαWithFixingY
+ When soft label Y is fixed, problem (6) degenerates to the
+ followingsupervisedcase:
+ min
+ ZTStZ=I,α,b
+ XTZ+1nbT−αY2
+ F+λW2
+ F. (21)
+ Notethatbiasbisafreevariablein(21), thusclosed-formsolution
+ withrespect tobcanbederivedas
+ ∂(XTZ+1nbT−αY2
+ F+λZ 2
+ F)
+ ∂b =0
+ ⇒(ZTX−αYT)1n+b1T
+ n1n=0
+ ⇒b=1
+ n (αYT−ZTX)1n. (22)
+ Byfurther substituting(22) into(21), supervisedcaseof rescaled
+ problem(6)canbereformulatedinto
+ min
+ ZTStZ=I,α
+ H(XTZ−αY) 2
+ F+λZ 2
+ F (23)
+ where thecenteringmatrixH=I−1
+ n
+ 1n1n
+ T ∈Rn×n is idempotent,
+ i.e.,H2=H.
+ Basedon(23), thediscussionisdecomposedintotwosubcasesas
+ follows.
+ 1)OptimizeαWithFixingZandY:WhenZandYarefixed,
+ problem(23)canberewrittenas
+ min
+ α
+ α2Tr(YTHY)−2αTr(ZTXHY) (24)
+ whichleads tothesolution
+ ∂(α2Tr(YTHY)−2αTr(ZTXHY))
+ ∂α =0⇒α=Tr(ZTXHY)
+ Tr(YTHY) .
+ (25)
+ 2)OptimizeZWithFixingαandY:WhenαandYarefixed,
+ problem(6)canberewrittenas
+ max
+ ZTStZ=I
+ 2αTr(ZTXHY) (26)
+ whichfurther leads to
+ max
+ QTQ=I
+ Tr(QTM) (27)
+ whereQ=S1
+ 2
+ tZandM=S−1
+ 2
+ t XHY.
+ In particular, a closed-formsolution can be achieved for prob
+lem(27)accordingtothefollowingtheorem.
+ Theorem1:As for problem (27), closed-form solution with
+ respect toQcanbeobtainedas
+ UVT=argmax
+ QTQ=I
+ Tr(QTM) (28)
+ whereM=USVT via thecompact SVDmethodwithU∈Rd×c,
+ S∈Rc×c, andV∈Rc×c.
+ DuetoTheorem1,problem(26)has theclosed-formsolutionas
+ Z=S−1
+ 2
+ t UVT. (29)
+ According to the closed-form solutions as previously derived
+ in(17), (22), (25), and(29),RURR-SLmethodcanbesummarized
+ inAlgorithm1toserveasaclusteringmethod.
+ Theorem2:Algorithm1decreases the objective value of prob
+lem(6)monotonicallyuntilconvergence.
+ Theorem3: ThelabelmatrixYin(6) isrow-wiselypenalizedby
+ alatent 1 regularization.
+ Theorem4: The solutionZtoproblem(6) is anonzeromatrix
+ withtherankc.
+ Authorized licensed use limited to: ULAKBIM UASL - Hacettepe Universitesi. Downloaded on November 03,2025 at 18:41:13 UTC from IEEE Xplore.  Restrictions apply. 
+IEEETRANSACTIONSONNEURALNETWORKSANDLEARNINGSYSTEMS,VOL.32,NO.1, JANUARY2021 453
+ Algorithm1RURR-SLMethodUnderProblem(6)
+ Input: inputdataX, total scatterSt, theclusternumberc, and
+ trade-offparameterλ.
+ Output:projectionmatrixZ∈Rd×c andsoft labelY∈Rn×c.
+ 1 InitializerandomsoftmatrixYsatisfyingY1c=1n;
+ 2whilenot convergedo
+ 3 UpdateM←S−1
+ 2
+ t XHY;
+ 4 CalculateUSVT=MviacompactSVDofMaccordingto
+ Theorem1;
+ 5 UpdateZ←S−1
+ 2
+ t UVT;
+ 6 Updateα←Tr(ZTXHY)
+ Tr(YTHY)
+ ;
+ 7 Updateb←1
+ n
+ (αYT−ZTX)1n;
+ 8 UpdateV←XTZ+1nbT;
+ 9 fori=1:ndo
+ 10 Updatepi←vi+α
+ c
+ 1c−1T cvi
+ c
+ 1c;
+ 11 Update ¯σviaNewtonmethodin(20);
+ 12 for j=1:cdo
+ 13 Updatey(α)
+ ij ←(pij−¯σ)+;
+ 14 end
+ 15 end
+ 16 CalculateY=1
+ α
+ Y(α);
+ 17 end
+ 18 returnZandY;
+ The proofs of Theorems 1–4 are provided in the Appendix.
+ According toTheorem4, the trivial solutionpreviouslymentioned
+ in(3)canbeprevented.
+ Complexity Analysis: Suppose Algorithm 1 converges after l
+ iterations. In each iteration, inverse computation is performed to
+ solve problem(28), such that the cost is O(d3). The calculation
+ of solutionZcostsO(d2n+d2c+dn2) and thecost of updating
+ α isO(dn2+dnc).Due to the fact that n>c, the total cost of
+ Algorithm1isO(l(d3+d2n+dn2)).SinceURR-SLandRURR-SL
+ has theonlydifferenceregardingtheadaptivescalingα, thecostof
+ URR-SLissimilarasRURR-SLinAlgorithm1.
+ VI. EXPERIMENTALRESULTS
+ In this section, we evaluate the performance of the proposed
+ RURR-SLmethodintermsof twotypicalclusteringevaluationmet
+rics,namely, clusteringaccuracy(Accuracy)andnormalizedmutual
+ information(NMI).
+ A.ClusteringAccuracy
+ The clustering accuracy in the experiment can be computed
+ byAccuracy=( n
+ i=1δ(map(ri),li)/n),where ri represents the
+ pseudo-cluster labelofxi, li represents thetrueclass label,n is the
+ numberofdatasamples, δ(x,y)is thedeltafunction, andmap(·)is
+ theoptimalmapfunction,whichmapseachcluster indextothebest
+ class label.Notethat δ(x,y)=1, if x=y; δ(x,y)=0, otherwise.
+ AlargerAccuracyimpliesabetterclusteringperformance.
+ B.NormalizedMutual Information
+ TheNMIservesasanindextodeterminethequalityoftheclusters.
+ Let {Ci},(1≤i≤c)denotes theset of clustersobtainedfromthe
+ ground truthand {C	
+j},(1≤ j ≤c) denotes theclusters obtained
+ fromtheproposedmethod.TheirNMINMI isdefinedasNMI=
+ ( c
+ i=1
+ c
+ j=1
+ nij log(nij/niˆnj))/(( c
+ i=1
+ ni log(ni/n))( c
+ j=1
+ ˆnj log(ˆnj/
+ n)))1/2, where ni denotes the number of data in the cluster
+ Ci,(1≤i≤c)and ˆnj denotes thenumberofdatabelongingtothe
+ Fig.1. ConvergentcurvesofURR-SL(α=1)andRURR-SLareperformed
+ under randomgenerateddata.
+ Fig.2. Parameter tuningforURR-SLandRURR-SLonthedataset IMM
+ under the twometrics, namely, Accuracy andNMI. (a)Accuracy (IMM).
+ (b)NMI (IMM).
+ classC	
+j,(1≤j≤c). Inparticular,nij isthenumberofdata,which
+ are in the intersectionbetweenclusterCi andclassC	
+j . Similarly,
+ a largerNMI represents amoreconsistent clusteringperformance.
+ Accordingly,NMI ranges from0to1.Morespecifically,NMI=1
+ if twosetsof clusters (set fromground truthandset fromcluster
+ algorithm)areidentical,whereasNMI=0if theyareindependent.
+ C.ComparativeMethodsandParameterTuning
+ Fourclusteringapproachesareutilizedfor thecomparison,which
+ includes thefollowing.
+ 1) k-meansmethod[7]assignsthegivendatasamplesintoclusters
+ such that thedatapoint is assigned toonlyoneclusterwith
+ 100%probability.
+ 2) Robustk-meansmethod(RMKMC)[33]utilizes 2,1-normloss
+ suchthattheclustercentroidsareintheformofweightedmean.
+ 3) Fuzzyk-means clustering (FKM) [24] allows eachobject to
+ possessacertaindegreeofmembership toeachcluster rather
+ thanhavingamembershiptoonlyoneclusterask-means.
+ 4) Robust and sparse fuzzy k-means clustering (RSFKM) [26]
+ appliesrobust lossfunctiontotackledataoutlierswithadding
+ theregularizationfor thepropersparseness.SincetheRSFKM
+ withcapped 2-normhasabetterperformancethan 2,1-norm,
+ weonlyemployRSFKM(capped 2) asacompetitor in this
+ brief.
+ Particularly,URR-SLin(4) isalsoutilizedwithα=1.As for all
+ themethods, realclusternumberc ispre-givenasapriori.
+ On one hand, from Fig. 1, we notice that the RURR-SL
+ converges to a less objective value thanURR-SLdoes. In other
+ words, RURR-SL is numerically better than URR-SL. On
+ the other hand, both URR-SL and RURR-SL methods have
+ the regularization parameter λ to tune. More specifically,
+ regularization parameter λ is searched in the grid of interval
+ [10−4,10−3,10−2,10−1,1,101,102,103,104].Asforthecomparative
+ methods, k-means andRMKMCareparameter-freewith the input
+ cluster prior c. The parameter of FKM, i.e., the fuzzy level
+ is chosen as 2.5 for the optimal performance, while RSFKM
+ has only an integer parameter, which is tuned in the grid
+ Authorized licensed use limited to: ULAKBIM UASL - Hacettepe Universitesi. Downloaded on November 03,2025 at 18:41:13 UTC from IEEE Xplore.  Restrictions apply. 
+454
+ IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 32, NO. 1, JANUARY 2021
+ Fig. 3. Comparison of URR-SL (α = 1) and RURR-SL regarding clustering result, soft label, and convergence under the three-cluster Gaussian distributed
+ data. (a) URR-SL: clustering. (b) URR-SL: label. (c) URR-SL: convergence. (d) RURR-SL: clustering. (e) RURR-SL: label. (f) RURR-SL: convergence.
+ TABLE I
+ COMPARISONOFCLUSTERINGACCURACYANDNMIUNDEREIGHTBENCHMARKDATA SETS
+ of [10,15,20,25,30,35,40,45,50] for selecting the optimal
+ neighbors. Besides that, an illustration of parameter tuning for
+ the proposed URR-SL and RURR-SL is demonstrated in Fig. 2
+ under the data set IMM. From Fig. 2, we notice that both URR-SL
+ and RURR-SL achieve the optimal Accuracy and NMI around
+ λ ∈[1,10] for the data set IMM.
+ D. Clustering Results
+ 1) Synthetic/Toy Data Sets: In Fig. 3, the proposed RURR-SL
+ method is compared with URR-SL method for clustering 3-cluster
+ Gaussian distributed data. In addition, the associated soft label and
+ convergent curve are also provided. In Fig. 4, the proposed RURR-SL
+ method is compared with URR-SL method and k-means method for
+ clustering multicluster data. Accordingly, the following conclusions
+ can be drawn:
+ 1) From Fig. 3, RURR-SL is better than URR-SL with 2%
+ Accuracy improvement under 3-cluster toy data. From Fig. 4,
+ both RURR-SL and URR-SL methods have better clustering
+ results than k-means under the multicluster toy data, i.e., 7%
+ and 4.5% Accuracy improvements, respectively.
+ 2) From Figs. 3 and 4, we could observe that the RURR-SL
+ method performs consistently better than the URR-SL method
+ in the aspects of both objective value and clustering results due
+ to the adaptive scaling in the rescaled counterpart of URR-SL.
+ 2) Benchmark Data Sets: In Fig. 5, soft labels of RURR-SL
+ and URR-SL methods are illustrated. In Table I, average clustering
+ accuracy and NMI of the clustering approaches previously mentioned
+ are reported under eight benchmark data sets, where each experiment
+ is run for 10 times. Therefore, we could conclude that:
+ 1) From Figs. 3 and 5, we could observe a row sparse soft label,
+ which corresponds to the analysis of Theorem 3.
+ 2) From Table I, the RURR-SL method performs consistently
+ better than other clustering approaches regarding clustering
+ accuracy. Especially for the data set FLOWER17, RURR-SL
+ has 2.68% improvement than the runner-up method RMKMC.
+ Authorized licensed use limited to: ULAKBIM UASL - Hacettepe Universitesi. Downloaded on November 03,2025 at 18:41:13 UTC from IEEE Xplore.  Restrictions apply. 
+IEEETRANSACTIONSONNEURALNETWORKSANDLEARNINGSYSTEMS,VOL.32,NO.1, JANUARY2021 455
+ Fig. 4. Comparisonof the clustering results for k-means,URR-SL, and
+ RURR-SL under multicluster data. (a) Raw (Multiclusters). (b) k-means.
+ (c)URR-SL(α=1). (d)RURR-SL(α=0.375).
+ Fig. 5. Illustrationof thesoft label forURR-SLandRURR-SLunder the
+ dataset IMM. (a)URR-SL(IMM). (b)RURR-SL(IMM).
+ TABLEII
+ DETAILSOFTHESELECTEDBENCHMARKDATASETS
+ 3) FromTableI, theRURR-SLmethodperformsbetterthanother
+ clusteringapproaches inmostcasesregardingNMI.Especially
+ for thedataset IMM,RURR-SLhas9.63%improvement than
+ therunner-upmethodRMKMC.
+ 4) FromTableI, theRURR-SLmethodperformsbetter thanthe
+ URR-SLintermsofbothclusteringmetricsduetotherescaled
+ strategy, i.e.,obtainingtheoptimal scaling.
+ E.DataSets
+ First, twosyntheticor toydatasetsareutilizedincluding3-cluster
+ Gaussiandistributeddataandmulticlusterdata.Second,eightbench
+markdatasetsareusedincludingAT&T,1COLON,2EHTZ53,3FEI,4
+ GLIOMA,5GT,6 FLOWER17,7 and IMM.8More specifics of each
+ benchmarkdatasetarelistedinTableII.
+ 1http://www.cl.cam.ac.uk/Research/DTG/attarchive/pub/data/att_faces.zip
+ 2http://penglab.janelia.org/proj/mRMR/index.htm#data
+ 3http://www.vision.ee.ethz.ch/datasets_extra/Obj_DB.tar.gz
+ 4http://fei.edu.br/cet/facedatabase.html
+ 5http://featureselection.asu.edu/datasets.php
+ 6http://www.anefian.com/research/gt_db.zip
+ 7http://www.robots.ox.ac.uk/vgg/data0.html
+ 8http://www2.imm.dtu.dk/aam/datasets/datasets.html
+ VII. CONCLUSION
+ In this brief, URR-SL is proposed for data clustering, such
+ that the potential trivial solution triggered by unsupervised ridge
+ regressionmodel can be avoided. In addition, manifold structure
+ is incorporated into the subspace via the uncorrelated constraint.
+ Moreover, a rowsparse soft label isobtainedcorrespondinglydue
+ to the latent 1 regularization. To further strengthen theURR-SL
+ model,anovel rescaledstrategyisprovided, suchthatanRURR-SL
+ isachieved.Consequently,aneffectiveclusteringmethodisproposed
+ withobtaining theoptimal scalingautomatically. Extensiveexperi
+ments areperformed tovalidate the effectiveness of theproposed
+ method.
+ APPENDIX
+ A.ProofofTheorem1
+ Proof: SupposefullSVDofMisM=U	VTwithU∈Rd×d,
+	∈Rd×c andV∈Rc×c, thenwehave
+ Tr(QTM)=Tr(QTU	VT)=Tr(	G)=
+ c
+ i=1
+ σiigii
+ whereG=VTQTU∈Rc×d with gii and σii being the (i,i)th
+ elementsof thematrixGand	, respectively.
+ Note thatGGT =I, thus |gii|≤1.On theother hand, σii≥0
+ sinceσii isasingularvalueof thematrixM.Therefore,we have
+ Tr(QTM)= c
+ i=1giiσii≤ c
+ i=1σii.
+ Apparently, the equality holds when gii = 1,(1 ≤ i ≤ c).
+ Inotherwords, Tr(QTM) reaches themaximumwhen thematrix
+ G=[I,0c(d−c)]∈Rc×d.Recall thatG=VTQTU, thus theoptimal
+ solutiontoproblem(28)canberepresentedas
+ Q=UGTVT=U[I;0(d−c)c]VT. (30)
+ Since(30)stemsfromfullSVDofmatrixM,(30)canberewritten
+ asQ=UVT viacompactSVDofmatrixM. □
+ B.ProofofTheorem2
+ Proof: SupposeZt+1,αt+1,andYt+1 areupdatedbyZt,αt,and
+ Ytwheret standsfor thetthiteration; then,accordingtosteps5and
+ 6inAlgorithm1andTheorem1,wehave
+ TrZT
+ t+1XHYt
+ ≥TrZT
+ tXHYt
+ ⇒α2
+ tTrYT
+ tHYt −2αtTrZT
+ t+1XHYt +Tr(I)
+ ≤α2
+ tTrYT
+ tHYt −2αtTrZT
+ tXHYt +Tr(I)
+ ⇒α2
+ t+1TrYT
+ tHYt −2αt+1TrZT
+ t+1XHYt +TrZT
+ t+1StZt+1
+ ≤α2
+ tTrYT
+ tHYt −2αtTrZT
+ tXHYt +TrZT
+ t StZt
+ ⇒HXTZt+1−αt+1Yt 2
+ F+λZt+1 2
+ F
+ ≤ HXTZt−αtYt 2
+ F+λZt 2
+ F. (31)
+ Inaddition, fromstep7tostep17inAlgorithm1,wecouldinfer
+ that
+ Vt+1−αt+1Yt+1 2
+ F
+ ≤ Vt+1−αt+1Yt 2
+ F
+ ⇒H(XTZt+1−αt+1Yt+1) 2
+ F+λZt+1 2
+ F
+ ≤ H(XTZt+1−αt+1Yt) 2
+ F+λZt+1 2
+ F. (32)
+ Therefore, (31)and(32)eventuallyleadto
+ H(XTZt+1−αt+1Yt+1) 2
+ F+λZt+1 2
+ F
+ ≤ H(XTZt−αtYt) 2
+ F+λZt 2
+ F
+ Authorized licensed use limited to: ULAKBIM UASL - Hacettepe Universitesi. Downloaded on November 03,2025 at 18:41:13 UTC from IEEE Xplore.  Restrictions apply. 
+456
+ IEEE TRANSACTIONS ON NEURAL NETWORKS AND LEARNING SYSTEMS, VOL. 32, NO. 1, JANUARY 2021
+ which indicates that Algorithm 1 decreases the objective value of
+ problem (6) monotonically. Moreover, 0 serves as a lower bound of
+ problem (6). In sum, Theorem 2 can be proved.
+ □
+ C. Proof of Theorem 3
+ Proof: The soft label Y is achieved by individually solving the
+ transpose of its each row vector in (9) as
+ 1
+ min
+ yT
+ i 1=1,yi≥0c1
+ 2 αyi −vi 2
+ 2
+ which implies a latent 1 regularization. Particularly, we could infer
+ that
+ min
+ yT
+ i 1c=1,yi≥0c1
+ 1
+ 2 αyi −vi 2
+ 2 = min
+ yT
+ i 1c=1,yi≥0c1
+ 1
+ 2 αyi −vi 2
+ 2 +ξ yi 1
+ which indicates that each row of Y is penalized by latent 1
+ regularization.
+ D. Proof of Theorem 4
+ □
+ Proof: As for the solution to problem (6), Z satisfies the
+ uncorrelated constraint ZTStZ = I. On one hand, we have
+ rank(ZTStZ) = rank(I) = c
+ where rank denotes the rank of the matrix.
+ On the other hand, since total scatter matrix St is positive definite,
+ we could infer that
+ rank(ZTStZ) = rank S1
+ 2
+ tZ 
+T
+ S1
+ 2
+ tZ = rank S1
+ 2
+ tZ = rank(Z).
+ In sum, Theorem 4 can be proved.
+ REFERENCES
+ □
+ [1] R. Zhang, F. Nie, and X. Li, “Self-weighted spectral clustering with
+ parameter-free constraint,” Neurocomputing, vol. 241, pp. 164–170,
+ Jun. 2017.
+ [2] X. Chen, F. Nie, J. Z. Huang, and M. Yang, “Scalable normalized cut
+ with improved spectral rotation,” in Proc. 26th Int. Joint Conf. Artif.
+ Intell., Aug. 2017, pp. 1518–1524.
+ [3] F. Nie, W. Zhu, and X. Li, “Unsupervised large graph embedding,” in
+ Proc. AAAI Conf. Artif. Intell., 2017, pp. 2422–2428.
+ [4] F. Nie, X. Wang, M. I. Jordan, and H. Huang, “The constrained Laplacian
+ rank algorithm for graph-based clustering,” in Proc. AAAI Conf. Artif.
+ Intell., 2016, pp. 1969–1976.
+ [5] F. Nie, X. Wang, and H. Huang, “Clustering and projected clustering
+ with adaptive neighbors,” in Proc. 20th ACM SIGKDD Int. Conf. Knowl.
+ Discovery Data Mining (KDD), 2014, pp. 977–986.
+ [6] F. Nie, D. Xu, I. W.-H. Tsang, and C. Zhang, “Flexible manifold embed
+ding: A framework for semi-supervised and unsupervised dimension
+ reduction,” IEEE Trans. Image Process., vol. 19, no. 7, pp. 1921–1932,
+ Jul. 2010.
+ [7] J. Macqueen, “Some methods for classification and analysis of multi
+variate observations,” in Proc. Berkeley Symp. Math. Statist. Probab.,
+ 1967, pp. 281–297.
+ [8] K. Tasdemir and E. Merenyi, “Exploiting data topology in visualization
+ and clustering of self-organizing maps,” IEEE Trans. Neural Netw.,
+ vol. 20, no. 4, pp. 549–562, Apr. 2009.
+ [9] K. Tasdemir, “Graph based representations of density distribution and
+ distances for self-organizing maps,” IEEE Trans. Neural Netw., vol. 21,
+ no. 3, pp. 520–526, Mar. 2010.
+ [10] J. Shi and J. Malik, “Normalized cuts and image segmentation,”
+ IEEE Trans. Pattern Anal. Mach. Intell., vol. 22, no. 8, pp. 888–905,
+ Aug. 2000.
+ [11] H. Hu, Z. Lin, J. Feng, and J. Zhou, “Smooth representation cluster
+ing,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., Jun. 2014,
+ pp. 3834–3841.
+ [12] C.-G. Li and R. Vidal, “Structured sparse subspace clustering: A unified
+ optimization framework,” in Proc. IEEE Conf. Comput. Vis. Pattern
+ Recognit. (CVPR), Jun. 2015, pp. 277–286.
+ [13] E. Elhamifar and R. Vidal, “Sparse subspace clustering: Algorithm,
+ theory, and applications,” IEEE Trans. Pattern Anal. Mach. Intell.,
+ vol. 35, no. 11, pp. 2765–2781, Nov. 2013.
+ [14] A. Ben-Hur, D. Horn, H. T. Siegelmann, and V. Vapnik, “Support vector
+ clustering,” J.Mach.Learn.Res., vol. 2, pp. 125–137, Mar. 2002.
+ [15] M. Girolami, “Mercer kernel-based clustering in feature space,” IEEE
+ Trans. Neural Netw., vol. 13, no. 3, pp. 780–784, May 2002.
+ [16] A. Szymkowiak-Have, M. A. Girolami, and J. Larsen, “Clustering
+ via kernel decomposition,” IEEE Trans. Neural Netw., vol. 17, no. 1,
+ pp. 256–264, Jan. 2006.
+ [17] J. Gui, Z. Sun, S. Ji, D. Tao, and T. Tan, “Feature selection based on
+ structured sparsity: A comprehensive study,” IEEE Trans. Neural Netw.
+ Learn. Syst., vol. 28, no. 7, pp. 1490–1507, Jul. 2017.
+ [18] F. Nie, W. Zhu, and X. Li, “Unsupervised feature selection with
+ structured graph optimization,” in Proc. AAAI Conf. Artif. Intell., 2016,
+ pp. 1302–1308.
+ [19] D. Wang, F. Nie, and H. Huang, “Feature selection via global redun
+dancy minimization,” IEEE Trans. Knowl. Data Eng., vol. 27, no. 10,
+ pp. 2743–2755, Oct. 2015.
+ [20] D. Cai, C. Zhang, and X. He, “Unsupervised feature selection for multi
+cluster data,” in Proc. 16th ACM SIGKDD Int. Conf. Knowl. Discovery
+ Data Mining (KDD), 2010, pp. 333–342.
+ [21] Y. Yang, H. Shen, Z. Ma, Z. Huang, and X. Zhou, “ 2,1-norm regularized
+ discriminative feature selection for unsupervised learning,” in Proc. Int.
+ Joint Conf. Artif. Intell., 2011, pp. 1589–1594.
+ [22] Z. Li, Y. Yang, J. Liu, X. Zhou, and H. Lu, “Unsupervised feature
+ selection using nonnegative spectral analysis.,” in Proc. AAAI, 2012,
+ pp. 1026–1032.
+ [23] E. H. Ruspini, “A new approach to clustering,” Inf. Control, vol. 15,
+ no. 1, pp. 22–32, 1969.
+ [24] J. C. Bezdek, “A convergence theorem for the fuzzy ISODATA clustering
+ algorithms,” IEEE Trans. Pattern Anal. Mach. Intell., vol. PAMI-2, no. 1,
+ pp. 1–8, Jan. 1980.
+ [25] M. J. Li, M. K. Ng, Y.-M. Cheung, and J. Z. Huang, “Agglomerative
+ fuzzy k-means clustering algorithm with selection of number of clus
+ters,” IEEE Trans. Knowl. Data Eng., vol. 20, no. 11, pp. 1519–1534,
+ Nov. 2008.
+ [26] J. Xu, J. Han, K. Xiong, and F. Nie, “Robust and sparse fuzzy
+ k-means clustering.,” in Proc. Int. Joint Conf. Artif. Intell., 2016,
+ pp. 2224–2230.
+ [27] Z. Deng, K.-S. Choi, Y. Jiang, and S. Wang, “Generalized hidden
+mapping ridge regression, knowledge-leveraged inductive transfer learn
+ing for neural networks, fuzzy systems and kernel methods,” IEEE Trans.
+ Cybern., vol. 44, no. 12, pp. 2585–2599, Dec. 2014.
+ [28] N. Kim, Y.-S. Jeong, M.-K. Jeong, and T. M. Young, “Kernel ridge
+ regression with lagged-dependent variable: Applications to prediction of
+ internal bond strength in a medium density fiberboard process,” IEEE
+ Trans. Syst., Man, Cybern. C, Appl. Rev., vol. 42, no. 6, pp. 1011–1020,
+ Nov. 2012.
+ [29] F. Nie, S. Xiang, Y. Liu, C. Hou, and C. Zhang, “Orthogonal vs.
+ uncorrelated least squares discriminant analysis for feature extraction,”
+ Pattern Recognit. Lett., vol. 33, no. 5, pp. 485–491, Apr. 2012.
+ [30] J. Ye, R. Janardan, Q. Li, and H. Park, “Feature reduction via generalized
+ uncorrelated linear discriminant analysis,” IEEE Trans. Knowl. Data
+ Eng., vol. 18, no. 10, pp. 1312–1322, Oct. 2006.
+ [31] F. Nie, R. Zhang, and X. Li, “A generalized power iteration method for
+ solving quadratic problem on the stiefel manifold,” Sci. China Inf. Sci.,
+ vol. 60, no. 11, pp. 1–10, Nov. 2017.
+ [32] S. J. Raudys and A. K. Jain, “Small sample size effects in statistical
+ pattern recognition: Recommendations for practitioners,” IEEE Trans.
+ Pattern Anal. Mach. Intell., vol. 13, no. 3, pp. 252–264, Mar. 1991.
+ [33] X. Cai, F. Nie, and H. Huang, “Multi-view k-means clustering on big
+ data,” in Proc. Int. Joint Conf. Artif. Intell., 2013, pp. 2598–2604.
+ Authorized licensed use limited to: ULAKBIM UASL - Hacettepe Universitesi. Downloaded on November 03,2025 at 18:41:13 UTC from IEEE Xplore.  Restrictions apply. 
