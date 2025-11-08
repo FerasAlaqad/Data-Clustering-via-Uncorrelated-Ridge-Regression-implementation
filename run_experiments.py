@@ -14,7 +14,6 @@ warnings.filterwarnings('ignore')
 # Import algorithms
 from rurr_implementation import RURR_SL, URR_SL, clustering_accuracy
 from baseline_algorithms import KMeansClustering, RMKMC, FuzzyKMeans, RSFKM
-from sklearn.metrics import normalized_mutual_info_score
 
 # Import dataset loaders
 from load_datasets import (
@@ -65,6 +64,67 @@ AVAILABLE_DATASETS = {
         "description": "Oxford flowers (1360 images, 17 categories)"
     },
 }
+
+
+def normalized_mutual_info_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    """
+    Compute NMI as defined in the paper (geometric mean normalization).
+
+    NMI = (sum_{i,j} (n_{ij}/n) * log( (n_{ij} * n) / (n_i * n_j) )) /
+          sqrt( sum_i (n_i/n) * log(n_i/n) * sum_j (n_j/n) * log(n_j/n) )
+    """
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    assert y_true.shape == y_pred.shape
+
+    n = y_true.size
+    if n == 0:
+        return 0.0
+
+    true_labels = np.unique(y_true)
+    pred_labels = np.unique(y_pred)
+
+    n_true = true_labels.size
+    n_pred = pred_labels.size
+
+    # Build contingency table
+    contingency = np.zeros((n_true, n_pred), dtype=float)
+    label_to_index_true = {label: idx for idx, label in enumerate(true_labels)}
+    label_to_index_pred = {label: idx for idx, label in enumerate(pred_labels)}
+
+    for t, p in zip(y_true, y_pred):
+        contingency[label_to_index_true[t], label_to_index_pred[p]] += 1
+
+    # Marginals
+    n_i = contingency.sum(axis=1)  # true cluster sizes
+    n_j = contingency.sum(axis=0)  # predicted cluster sizes
+
+    # Compute mutual information
+    mi = 0.0
+    for i in range(n_true):
+        for j in range(n_pred):
+            n_ij = contingency[i, j]
+            if n_ij > 0:
+                mi += (n_ij / n) * np.log((n_ij * n) / (n_i[i] * n_j[j]))
+
+    # Compute entropies (using natural log)
+    h_true = 0.0
+    for i in range(n_true):
+        if n_i[i] > 0:
+            p = n_i[i] / n
+            h_true -= p * np.log(p)
+
+    h_pred = 0.0
+    for j in range(n_pred):
+        if n_j[j] > 0:
+            p = n_j[j] / n
+            h_pred -= p * np.log(p)
+
+    denom = np.sqrt(h_true * h_pred)
+    if denom == 0:
+        return 0.0
+
+    return mi / denom
 
 
 def run_algorithm(algo_name: str, algo, X: np.ndarray, y_true: np.ndarray) -> Dict:
