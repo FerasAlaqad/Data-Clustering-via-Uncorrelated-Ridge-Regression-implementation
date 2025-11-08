@@ -19,6 +19,7 @@ from sklearn.metrics import normalized_mutual_info_score
 # Import dataset loaders
 from load_datasets import (
     load_glioma,
+    load_colon_csv,
     load_att_faces,
     load_gt_faces,
     load_flower17,
@@ -37,6 +38,11 @@ AVAILABLE_DATASETS = {
         "name": "Multicluster",
         "loader": lambda: load_toy_dataset('multicluster'),
         "description": "Synthetic multicluster data (Fig. 4)"
+    },
+    "colon": {
+        "name": "COLON",
+        "loader": lambda: load_colon_csv("datasets/colon - labled.csv"),
+        "description": "Colon cancer gene expression (62 samples, 2000 genes, 2 classes)"
     },
     "glioma": {
         "name": "GLIOMA",
@@ -289,6 +295,7 @@ def main():
 Available datasets:
   3cluster      - 3-Cluster Gaussian (synthetic)
   multicluster  - Multicluster (synthetic)
+  colon         - COLON gene expression (CSV)
   glioma        - GLIOMA gene expression
   att_faces     - AT&T face database
   gt_faces      - Georgia Tech faces

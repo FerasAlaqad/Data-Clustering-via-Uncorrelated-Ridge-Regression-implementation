@@ -88,10 +88,11 @@ class RURR_SL:
         b = (1/n) * (alpha * Y.T - Z.T @ X) @ ones_n
         return b
     
-    def _newton_method_sigma(self, p_i, alpha, max_iter_newton=20):
+    def _newton_method_sigma(self, p_i, max_iter_newton=20):
         """
-        Solve for σ̄ using Newton method
-        Paper's equation (19): f(σ̄) = (1/c) * Σ(σ̄ - p_ij)_+ - σ̄ = 0
+        Solve for σ̄ using Newton method as in paper's equation (19)
+        f(σ̄) = (1/c) * Σ(σ̄ - p_ij)_+ - σ̄ = 0
+        Paper's Algorithm 1 line 11: Update σ̄ via Newton method in (20)
         """
         c = len(p_i)
         sigma_bar = np.mean(p_i)  # Initial guess
@@ -107,7 +108,7 @@ class RURR_SL:
             if abs(f_prime) < 1e-10:
                 break
                 
-            # Newton update
+            # Newton update: σ̄_{t+1} = σ̄_t - f(σ̄_t) / f'(σ̄_t)
             sigma_bar_new = sigma_bar - f / f_prime
             
             if abs(sigma_bar_new - sigma_bar) < 1e-6:
@@ -135,20 +136,16 @@ class RURR_SL:
             # Compute p_i as in paper's Algorithm 1 (line 494-498)
             p_i = v_i + (alpha / self.n_clusters) - np.mean(v_i)
             
-            # Solve for σ̄ using Newton method
-            sigma_bar = self._newton_method_sigma(p_i, alpha)
+            # Solve for σ̄ using Newton method (equation 19)
+            sigma_bar = self._newton_method_sigma(p_i)
             
             # Update y_i^(α) = (p_i - σ̄)_+ as in equation (17)
             Y_alpha[i, :] = np.maximum(p_i - sigma_bar, 0)
         
-        # Y = (1/α) * Y^(α) as in Algorithm 1 (line 505-507)
+        # Y = (1/α) * Y^(α) as in Algorithm 1 line 16
         Y = Y_alpha / (alpha + 1e-10)
         
-        # Normalize to ensure Y1_c = 1_n (safety check)
-        row_sums = Y.sum(axis=1, keepdims=True)
-        row_sums = np.maximum(row_sums, 1e-10)
-        Y = Y / row_sums
-        
+        # No additional normalization - Algorithm 1 doesn't normalize after line 16
         return Y
     
     def _compute_objective(self, X, Z, b, Y, alpha, H):
@@ -287,8 +284,9 @@ class URR_SL:
     
     def _newton_method_sigma(self, p_i, max_iter_newton=20):
         """
-        Solve for σ̄ using Newton method
-        Paper's equation (19): f(σ̄) = (1/c) * Σ(σ̄ - p_ij)_+ - σ̄ = 0
+        Solve for σ̄ using Newton method as in paper's equation (19)
+        f(σ̄) = (1/c) * Σ(σ̄ - p_ij)_+ - σ̄ = 0
+        Paper's Algorithm 1 line 11: Update σ̄ via Newton method in (20)
         """
         c = len(p_i)
         sigma_bar = np.mean(p_i)  # Initial guess
@@ -304,6 +302,7 @@ class URR_SL:
             if abs(f_prime) < 1e-10:
                 break
                 
+            # Newton update: σ̄_{t+1} = σ̄_t - f(σ̄_t) / f'(σ̄_t)
             sigma_bar_new = sigma_bar - f / f_prime
             
             if abs(sigma_bar_new - sigma_bar) < 1e-6:
@@ -337,14 +336,10 @@ class URR_SL:
             # Update y_i^(α) = (p_i - σ̄)_+ as in equation (17)
             Y_alpha[i, :] = np.maximum(p_i - sigma_bar, 0)
         
-        # Y = (1/α) * Y^(α) as in Algorithm 1 (line 505-507)
+        # Y = (1/α) * Y^(α) as in Algorithm 1 line 16
         Y = Y_alpha / (self.alpha + 1e-10)
         
-        # Normalize to ensure Y1_c = 1_n (safety check)
-        row_sums = Y.sum(axis=1, keepdims=True)
-        row_sums = np.maximum(row_sums, 1e-10)
-        Y = Y / row_sums
-        
+        # No additional normalization - Algorithm 1 doesn't normalize after line 16
         return Y
     
     def _compute_objective(self, X, Z, b, Y, H):

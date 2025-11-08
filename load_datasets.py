@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Tuple, Optional
 import scipy.io as sio
 from PIL import Image
+import pandas as pd
 
 
 def load_glioma(dataset_path: str = "datasets/GLIOMA.mat") -> Tuple[np.ndarray, np.ndarray]:
@@ -121,6 +122,40 @@ def load_colon(dataset_path: str = "datasets/COLON.mat") -> Tuple[np.ndarray, np
     if y.min() == 1:
         y = y - 1
     
+    return X, y
+
+
+def load_colon_csv(dataset_path: str = "datasets/colon - labled.csv") -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Load COLON dataset from labeled CSV file.
+
+    Parameters
+    ----------
+    dataset_path : str
+        Path to colon - labled.csv file (62 samples × 2000 genes + class label)
+
+    Returns
+    -------
+    X : ndarray of shape (d, n)
+        Feature matrix where d=2000 genes, n=62 samples
+    y : ndarray of shape (n,)
+        True labels (0 = Normal, 1 = Abnormal)
+    """
+    df = pd.read_csv(dataset_path)
+
+    # Drop any unnamed index columns
+    unnamed_cols = [col for col in df.columns if col.lower().startswith("unnamed")]
+    df = df.drop(columns=unnamed_cols)
+
+    if "Class" not in df.columns:
+        raise ValueError("Expected 'Class' column with labels in colon dataset.")
+
+    y_raw = df["Class"].astype(str).str.lower()
+    y = (y_raw != "normal").astype(int).to_numpy()  # Abnormal -> 1, Normal -> 0
+
+    feature_df = df.drop(columns=["Class"])
+    X = feature_df.to_numpy(dtype=float).T  # (d, n)
+
     return X, y
 
 
