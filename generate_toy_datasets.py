@@ -13,7 +13,7 @@ from pathlib import Path
 
 def generate_3cluster_gaussian(
     n_samples_per_cluster=100,
-    n_features=2,
+    n_features=3,
     cluster_std=0.8,
     random_state=42
 ):
@@ -58,12 +58,22 @@ def generate_3cluster_gaussian(
     for cluster_id, center in enumerate(centers):
         # Generate samples from Gaussian distribution
         cluster_samples = rng.randn(n_samples_per_cluster, n_features) * cluster_std
-        cluster_samples += center
+        # Always generate in base 2D around centers for visualization
+        cluster_samples[:, :2] += center
         
         X_list.append(cluster_samples)
         y_list.extend([cluster_id] * n_samples_per_cluster)
     
-    X = np.vstack(X_list).T  # Shape: (d, n)
+    X_base = np.vstack(X_list)  # (n, requested_features)
+    # Ensure dimensionality satisfies d >= c (important for URR/RURR)
+    target_d = max(int(n_features), n_clusters, 2)
+    if target_d > X_base.shape[1]:
+        extra = rng.randn(X_base.shape[0], target_d - X_base.shape[1]) * (cluster_std * 0.05)
+        X_base = np.hstack([X_base, extra])
+    elif target_d < X_base.shape[1]:
+        X_base = X_base[:, :target_d]
+
+    X = X_base.T  # Shape: (d, n)
     y = np.array(y_list)
     
     return X, y
@@ -71,7 +81,7 @@ def generate_3cluster_gaussian(
 
 def generate_multicluster_data(
     n_samples_per_cluster=50,
-    n_features=2,
+    n_features=7,
     random_state=42
 ):
     """
@@ -121,12 +131,23 @@ def generate_multicluster_data(
     for cluster_id, (center, std) in enumerate(zip(centers, cluster_stds)):
         # Generate samples from Gaussian distribution
         cluster_samples = rng.randn(n_samples_per_cluster, n_features) * std
-        cluster_samples += center
+        # Base 2D structure for visualization
+        cluster_samples[:, :2] += center
         
         X_list.append(cluster_samples)
         y_list.extend([cluster_id] * n_samples_per_cluster)
     
-    X = np.vstack(X_list).T  # Shape: (d, n)
+    X_base = np.vstack(X_list)  # (n, requested_features)
+    # Ensure dimensionality satisfies d >= c
+    target_d = max(int(n_features), n_clusters, 2)
+    if target_d > X_base.shape[1]:
+        std_mean = np.mean(cluster_stds)
+        extra = rng.randn(X_base.shape[0], target_d - X_base.shape[1]) * (std_mean * 0.05)
+        X_base = np.hstack([X_base, extra])
+    elif target_d < X_base.shape[1]:
+        X_base = X_base[:, :target_d]
+
+    X = X_base.T  # Shape: (d, n)
     y = np.array(y_list)
     
     return X, y
@@ -150,6 +171,7 @@ def save_toy_datasets(output_dir="datasets"):
     print("\n1. Generating 3-cluster Gaussian data...")
     X_3cluster, y_3cluster = generate_3cluster_gaussian(
         n_samples_per_cluster=100,
+        n_features=3,         # ensure d >= c
         cluster_std=0.8,
         random_state=42
     )
@@ -169,6 +191,7 @@ def save_toy_datasets(output_dir="datasets"):
     print("\n2. Generating multicluster data...")
     X_multi, y_multi = generate_multicluster_data(
         n_samples_per_cluster=50,
+        n_features=7,         # ensure d >= c
         random_state=42
     )
     
