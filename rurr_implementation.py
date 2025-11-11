@@ -4,6 +4,30 @@ from scipy.linalg import svd, sqrtm
 from scipy.optimize import linear_sum_assignment
 
 
+def _project_to_probability_simplex(vector: np.ndarray) -> np.ndarray:
+    """
+    Project a 1-D array onto the probability simplex.
+
+    The implementation follows:
+    Wang, Weiran, and Miguel Á. Carreira-Perpiñán. "Projection onto the probability simplex:
+    An efficient algorithm with a simple proof, and an application." arXiv preprint arXiv:1309.1541 (2013).
+    """
+    if vector.ndim != 1:
+        raise ValueError("Input must be a 1-D array.")
+
+    sorted_vals = np.sort(vector)[::-1]
+    cssv = np.cumsum(sorted_vals) - 1
+    rho = np.nonzero(sorted_vals - cssv / (np.arange(len(vector)) + 1) > 0)[0]
+
+    if rho.size == 0:
+        theta = 0.0
+    else:
+        rho = rho[-1]
+        theta = cssv[rho] / (rho + 1.0)
+
+    return np.maximum(vector - theta, 0.0)
+
+
 class RURR_SL:
     """
     Rescaled Uncorrelated Ridge Regression with Soft Label (RURR-SL)
@@ -13,7 +37,16 @@ class RURR_SL:
     Subject to: Z^T S_t Z = I, Y1_c = 1_n, Y ≥ 0
     """
     
-    def __init__(self, n_clusters, lambda_reg=1.0, max_iter=100, tol=1e-6, random_state=None):
+    def __init__(
+        self,
+        n_clusters,
+        lambda_reg=1.0,
+        max_iter=100,
+        tol=1e-6,
+        random_state=None,
+        scatter_reg=1e-6,
+        min_alpha=1e-8,
+    ):
         """
         Parameters
         ----------
@@ -27,12 +60,18 @@ class RURR_SL:
             Convergence tolerance
         random_state : int or None
             Random seed for reproducibility
+        scatter_reg : float
+            Diagonal loading term ε that guarantees St is positive definite
+        min_alpha : float
+            Numerical floor for α to keep label scaling well-conditioned
         """
         self.n_clusters = n_clusters
         self.lambda_reg = lambda_reg
         self.max_iter = max_iter
         self.tol = tol
         self.random_state = random_state
+        self.scatter_reg = scatter_reg
+        self.min_alpha = min_alpha
         self.Z = None
         self.Y = None
         self.alpha = None
@@ -46,7 +85,7 @@ class RURR_SL:
         """
         n = X.shape[1]
         H = np.eye(n) - (1.0 / n) * np.ones((n, n))
-        S_t = X @ H @ X.T + self.lambda_reg * np.eye(X.shape[0])
+        S_t = X @ H @ X.T + self.scatter_reg * np.eye(X.shape[0])
         return S_t, H
     
     def _initialize_Y(self, n_samples):
@@ -66,6 +105,7 @@ class RURR_SL:
         """
         # Algorithm 1, line 3: Update M ← S_t^{-1/2} X H Y
         S_t_inv_sqrt = sqrtm(np.linalg.inv(S_t))
+        S_t_inv_sqrt = np.real_if_close(S_t_inv_sqrt)
         M = S_t_inv_sqrt @ X @ H @ Y
         
         # Algorithm 1, line 4: Calculate U S V^T = M via compact SVD
@@ -83,7 +123,13 @@ class RURR_SL:
         """
         numerator = np.trace(Z.T @ X @ H @ Y)
         denominator = np.trace(Y.T @ H @ Y)
+
+        if denominator <= 0:
+            return self.min_alpha
+
         alpha = numerator / denominator
+        if not np.isfinite(alpha) or alpha <= self.min_alpha:
+            return self.min_alpha
         return alpha
     
     def _update_b(self, Z, X, Y, alpha):
@@ -126,6 +172,9 @@ class RURR_SL:
         Paper Algorithm 1, lines 8-16
         Paper Equation (17): y^{(α)}_{ij} = (p_{ij} - σ̄)_+
         """
+        if alpha <= 0:
+            raise ValueError("Alpha must remain positive to scale soft labels.")
+
         n = X.shape[1]
         # Algorithm 1, line 8: Update V ← X^T Z + 1_n b^T
         V = X.T @ Z + np.ones((n, 1)) @ b.T
@@ -149,8 +198,20 @@ class RURR_SL:
         
         # Algorithm 1, line 16: Calculate Y = (1/α)Y^{(α)}
         Y = Y_alpha / alpha
-        
+
         return Y
+
+    def _enforce_soft_constraints(self, Y):
+        """
+        Ensure Y satisfies Y1_c = 1_n and Y >= 0 by projecting each row
+        onto the probability simplex.
+        """
+        Y = np.asarray(Y, dtype=float)
+        projected_rows = np.array(
+            [_project_to_probability_simplex(row) for row in Y],
+            dtype=float,
+        )
+        return projected_rows
     
     def _compute_objective(self, X, Z, b, Y, alpha):
         """
@@ -192,7 +253,8 @@ class RURR_SL:
             self.b = self._update_b(self.Z, X, self.Y, self.alpha)
             
             # Lines 8-16: Update Y
-            self.Y = self._update_Y(X, self.Z, self.b, self.alpha)
+            Y_candidate = self._update_Y(X, self.Z, self.b, self.alpha)
+            self.Y = self._enforce_soft_constraints(Y_candidate)
             
             # Check convergence
             change = np.linalg.norm(self.Y - Y_old, 'fro')
@@ -221,7 +283,16 @@ class URR_SL:
     Paper Equation (4) with fixed scaling parameter α
     """
     
-    def __init__(self, n_clusters, alpha=1.0, lambda_reg=1.0, max_iter=100, tol=1e-6, random_state=None):
+    def __init__(
+        self,
+        n_clusters,
+        alpha=1.0,
+        lambda_reg=1.0,
+        max_iter=100,
+        tol=1e-6,
+        random_state=None,
+        scatter_reg=1e-6,
+    ):
         """
         Parameters
         ----------
@@ -237,6 +308,8 @@ class URR_SL:
             Convergence tolerance
         random_state : int or None
             Random seed
+        scatter_reg : float
+            Diagonal loading ε used to stabilise St
         """
         self.n_clusters = n_clusters
         self.alpha = alpha
@@ -244,6 +317,7 @@ class URR_SL:
         self.max_iter = max_iter
         self.tol = tol
         self.random_state = random_state
+        self.scatter_reg = scatter_reg
         self.Z = None
         self.Y = None
         self.b = None
@@ -253,7 +327,7 @@ class URR_SL:
         """Compute S_t = XHX^T + λI"""
         n = X.shape[1]
         H = np.eye(n) - (1.0 / n) * np.ones((n, n))
-        S_t = X @ H @ X.T + self.lambda_reg * np.eye(X.shape[0])
+        S_t = X @ H @ X.T + self.scatter_reg * np.eye(X.shape[0])
         return S_t, H
     
     def _initialize_Y(self, n_samples):
@@ -266,6 +340,7 @@ class URR_SL:
     def _update_Z(self, X, Y, S_t, H):
         """Update Z"""
         S_t_inv_sqrt = sqrtm(np.linalg.inv(S_t))
+        S_t_inv_sqrt = np.real_if_close(S_t_inv_sqrt)
         M = S_t_inv_sqrt @ X @ H @ Y
         U, S, Vt = svd(M, full_matrices=False)
         Z = S_t_inv_sqrt @ U @ Vt
@@ -302,6 +377,9 @@ class URR_SL:
     
     def _update_Y(self, X, Z, b):
         """Update Y with fixed alpha"""
+        if self.alpha <= 0:
+            raise ValueError("Alpha must remain positive to scale soft labels.")
+
         n = X.shape[1]
         V = X.T @ Z + np.ones((n, 1)) @ b.T
         
@@ -316,7 +394,15 @@ class URR_SL:
                 Y_alpha[i, j] = max(p_i[j] - sigma_bar, 0)
         
         Y = Y_alpha / self.alpha
-        return Y
+        return self._enforce_soft_constraints(Y)
+
+    def _enforce_soft_constraints(self, Y):
+        Y = np.asarray(Y, dtype=float)
+        projected_rows = np.array(
+            [_project_to_probability_simplex(row) for row in Y],
+            dtype=float,
+        )
+        return projected_rows
     
     def _compute_objective(self, X, Z, b, Y):
         """Compute objective"""
