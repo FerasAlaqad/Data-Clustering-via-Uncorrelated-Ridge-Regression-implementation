@@ -100,6 +100,18 @@ AVAILABLE_DATASETS = {
 }
 
 
+PRESET_PARAMS = {
+    "3cluster": {"lambda_rurr": 1e-4, "lambda_urr": 1e-4, "rsfkm_cap": 10},
+    "multicluster": {"lambda_rurr": 1e-4, "lambda_urr": 1e4, "rsfkm_cap": 40},
+    "nested_circles": {"lambda_rurr": 1e-1, "lambda_urr": 1e2, "rsfkm_cap": 10},
+    "moons": {"lambda_rurr": 1e-4, "lambda_urr": 1.0, "rsfkm_cap": 10},
+    "colon": {"lambda_rurr": 1e2, "lambda_urr": 1e2, "rsfkm_cap": 10},
+    "att_faces": {"lambda_rurr": 1e2, "lambda_urr": 1e2, "rsfkm_cap": 30},
+    "gt_faces": {"lambda_rurr": 1e2, "lambda_urr": 1e2, "rsfkm_cap": 30},
+    "flower17": {"lambda_rurr": 1e2, "lambda_urr": 1e2, "rsfkm_cap": 30},
+}
+
+
 def prompt_user_for_datasets(default_selection: List[str]) -> List[str]:
     """
     Prompt the user to choose which datasets to train/test on.
@@ -371,10 +383,14 @@ def run_experiments_on_dataset(dataset_key: str, n_runs: int = 10,
         best_cap = tune_rsfkm_parameter(X, y_true, n_clusters, n_trials=3)
         print(f"✓ Best cap = {best_cap}")
     else:
-        # Use default values
-        best_lambda_rurr = 1.0
-        best_lambda_urr = 1.0
-        best_cap = 30
+        preset = PRESET_PARAMS.get(dataset_key, {})
+        best_lambda_rurr = preset.get("lambda_rurr", 1.0)
+        best_lambda_urr = preset.get("lambda_urr", 1.0)
+        best_cap = preset.get("rsfkm_cap", 30)
+        print("\n  Using preset parameters:")
+        print(f"    RURR-SL λ = {best_lambda_rurr}")
+        print(f"    URR-SL  λ = {best_lambda_urr}")
+        print(f"    RSFKM cap = {best_cap}")
     
     # Run experiments (Paper: 10 times)
     print(f"\n  Running {n_runs} experiments:")
@@ -531,7 +547,7 @@ def main():
                        help='Datasets to run')
     parser.add_argument('--all', action='store_true', help='Run on all datasets')
     parser.add_argument('--runs', type=int, default=10, help='Number of runs (paper uses 10)')
-    parser.add_argument('--no-tune', action='store_true', help='Skip parameter tuning')
+    parser.add_argument('--tune', action='store_true', help='Run parameter tuning instead of using presets')
     parser.add_argument('--output', type=str, default='paper_results.txt', help='Output file')
     
     args = parser.parse_args()
@@ -552,7 +568,7 @@ def main():
     print("="*80)
     print(f"Datasets: {', '.join(datasets_to_run)}")
     print(f"Runs per dataset: {args.runs} (Paper uses 10)")
-    print(f"Parameter tuning: {'Yes' if not args.no_tune else 'No'} (Paper does tuning)")
+    print(f"Parameter tuning: {'Yes (grid search)' if args.tune else 'No (using preset values)'}")
     print(f"λ grid: {LAMBDA_GRID}")
     print(f"RSFKM cap grid: {RSFKM_CAP_GRID}")
     print("="*80)
@@ -563,7 +579,7 @@ def main():
         results = run_experiments_on_dataset(
             dataset_key,
             n_runs=args.runs,
-            tune_params=not args.no_tune
+            tune_params=args.tune
         )
         all_results[dataset_key] = results
     
