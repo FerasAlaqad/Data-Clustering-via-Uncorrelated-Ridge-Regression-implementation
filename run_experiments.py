@@ -15,6 +15,7 @@ import time
 from pathlib import Path
 from typing import Dict, List, Tuple
 import warnings
+import json
 warnings.filterwarnings('ignore')
 
 # Import algorithms
@@ -537,6 +538,43 @@ def save_results_to_file(all_results: Dict[str, Dict], output_file: str = "paper
     print(f"\n✓ Results saved to {output_file}")
 
 
+def save_results_to_json(all_results: Dict[str, Dict], output_file: str = "paper_results.json"):
+    """
+    Save raw numerical results to a JSON file for downstream processing (e.g., plotting)
+    """
+
+    def _to_builtin(value):
+        if isinstance(value, (np.floating, np.integer)):
+            return value.item()
+        if isinstance(value, np.ndarray):
+            return value.tolist()
+        return value
+
+    serializable = {}
+
+    for dataset_key, results in all_results.items():
+        if results is None:
+            continue
+
+        dataset_meta = AVAILABLE_DATASETS.get(dataset_key, {})
+        serializable[dataset_key] = {
+            "name": dataset_meta.get("name", dataset_key),
+            "description": dataset_meta.get("description", ""),
+            "metrics": {}
+        }
+
+        for algo_name, stats in results.items():
+            serializable[dataset_key]["metrics"][algo_name] = {
+                metric_key: _to_builtin(metric_value)
+                for metric_key, metric_value in stats.items()
+            }
+
+    with open(output_file, 'w') as f:
+        json.dump(serializable, f, indent=2)
+
+    print(f"✓ Results (JSON) saved to {output_file}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Run clustering experiments following exact paper methodology",
@@ -549,6 +587,8 @@ def main():
     parser.add_argument('--runs', type=int, default=10, help='Number of runs (paper uses 10)')
     parser.add_argument('--tune', action='store_true', help='Run parameter tuning instead of using presets')
     parser.add_argument('--output', type=str, default='paper_results.txt', help='Output file')
+    parser.add_argument('--json-output', type=str, default='paper_results.json',
+                       help='Path to save raw numerical results in JSON format')
     
     args = parser.parse_args()
     
@@ -586,6 +626,8 @@ def main():
     # Print and save results
     print_results_table(all_results)
     save_results_to_file(all_results, args.output)
+    if args.json_output:
+        save_results_to_json(all_results, args.json_output)
     
 
 
