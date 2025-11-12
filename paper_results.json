@@ -8,60 +8,60 @@
         "acc_std": 0.0,
         "nmi_mean": 1.0,
         "nmi_std": 0.0,
-        "time_mean": 0.10315608978271484,
-        "time_std": 0.06615257263183594,
+        "time_mean": 0.0442927360534668,
+        "time_std": 0.03582890682235067,
         "success_rate": 1.0,
-        "n_success": 2
+        "n_success": 10
       },
       "RMKMC": {
-        "acc_mean": 1.0,
-        "acc_std": 0.0,
-        "nmi_mean": 1.0,
-        "nmi_std": 0.0,
-        "time_mean": 0.006404280662536621,
-        "time_std": 0.002531886100769043,
+        "acc_mean": 0.9036666666666667,
+        "acc_std": 0.19266810841444412,
+        "nmi_mean": 0.930549710817079,
+        "nmi_std": 0.13890059224177487,
+        "time_mean": 0.00920414924621582,
+        "time_std": 0.008551672303099016,
         "success_rate": 1.0,
-        "n_success": 2
+        "n_success": 10
       },
       "FKM": {
         "acc_mean": 1.0,
         "acc_std": 0.0,
         "nmi_mean": 1.0,
         "nmi_std": 0.0,
-        "time_mean": 0.004608511924743652,
-        "time_std": 0.000719904899597168,
+        "time_mean": 0.003875589370727539,
+        "time_std": 0.0004386702460442958,
         "success_rate": 1.0,
-        "n_success": 2
+        "n_success": 10
       },
       "RSFKM": {
-        "acc_mean": 1.0,
-        "acc_std": 0.0,
-        "nmi_mean": 1.0,
-        "nmi_std": 0.0,
-        "time_mean": 0.003443002700805664,
-        "time_std": 0.00031566619873046875,
+        "acc_mean": 0.945,
+        "acc_std": 0.16499999999999998,
+        "nmi_mean": 0.9145836583559859,
+        "nmi_std": 0.25624902493204194,
+        "time_mean": 0.0029013872146606444,
+        "time_std": 0.0008513373293743922,
         "success_rate": 1.0,
-        "n_success": 2
+        "n_success": 10
       },
       "URR-SL": {
-        "acc_mean": 0.9266666666666666,
-        "acc_std": 0.06666666666666665,
-        "nmi_mean": 0.8578853843584006,
-        "nmi_std": 0.1123057728842044,
-        "time_mean": 0.07883918285369873,
-        "time_std": 0.006445050239562988,
+        "acc_mean": 0.8946666666666665,
+        "acc_std": 0.1501347542857564,
+        "nmi_mean": 0.823714822967621,
+        "nmi_std": 0.19250542048152558,
+        "time_mean": 0.08262822628021241,
+        "time_std": 0.01289863218810429,
         "success_rate": 1.0,
-        "n_success": 2
+        "n_success": 10
       },
       "RURR-SL": {
-        "acc_mean": 1.0,
-        "acc_std": 0.0,
-        "nmi_mean": 1.0,
-        "nmi_std": 0.0,
-        "time_mean": 2.748264193534851,
-        "time_std": 0.21674859523773193,
+        "acc_mean": 0.9969999999999999,
+        "acc_std": 0.009000000000000008,
+        "nmi_mean": 0.988094269526916,
+        "nmi_std": 0.03571719141925169,
+        "time_mean": 2.3422438144683837,
+        "time_std": 0.18095268454756397,
         "success_rate": 1.0,
-        "n_success": 2
+        "n_success": 10
       }
     }
   },
@@ -72,62 +72,260 @@
       "K-means": {
         "acc_mean": 0.9983333333333333,
         "acc_std": 0.0,
-        "nmi_mean": 0.9947861495239686,
-        "nmi_std": 0.0,
-        "time_mean": 0.04691874980926514,
-        "time_std": 0.002758622169494629,
+        "nmi_mean": 0.9947861495239685,
+        "nmi_std": 1.1102230246251565e-16,
+        "time_mean": 0.05855555534362793,
+        "time_std": 0.022000569111096532,
         "success_rate": 1.0,
-        "n_success": 2
+        "n_success": 10
       },
       "RMKMC": {
-        "acc_mean": 0.7849999999999999,
-        "acc_std": 0.21500000000000002,
-        "nmi_mean": 0.8897227793341707,
-        "nmi_std": 0.1102772206658294,
-        "time_mean": 0.01674485206604004,
-        "time_std": 0.005432605743408203,
+        "acc_mean": 0.8375,
+        "acc_std": 0.1437943168402547,
+        "nmi_mean": 0.917103379115791,
+        "nmi_std": 0.07568543303542426,
+        "time_mean": 0.035773611068725585,
+        "time_std": 0.019429473451428675,
         "success_rate": 1.0,
-        "n_success": 2
+        "n_success": 10
       },
       "FKM": {
         "acc_mean": 1.0,
         "acc_std": 0.0,
         "nmi_mean": 1.0,
         "nmi_std": 0.0,
-        "time_mean": 0.01462709903717041,
-        "time_std": 0.002392411231994629,
+        "time_mean": 0.018447017669677733,
+        "time_std": 0.005451269057609013,
         "success_rate": 1.0,
-        "n_success": 2
+        "n_success": 10
       },
       "RSFKM": {
         "acc_mean": 1.0,
         "acc_std": 0.0,
         "nmi_mean": 1.0,
         "nmi_std": 0.0,
-        "time_mean": 0.00540614128112793,
-        "time_std": 0.0006518363952636719,
+        "time_mean": 0.007585668563842773,
+        "time_std": 0.0037113725798239524,
         "success_rate": 1.0,
-        "n_success": 2
+        "n_success": 10
       },
       "URR-SL": {
-        "acc_mean": 0.6183333333333334,
-        "acc_std": 0.03666666666666668,
-        "nmi_mean": 0.7233235390628585,
-        "nmi_std": 0.05702115298904903,
-        "time_mean": 0.13454604148864746,
-        "time_std": 0.0054950714111328125,
+        "acc_mean": 0.6378333333333333,
+        "acc_std": 0.10163401114893686,
+        "nmi_mean": 0.766112515822853,
+        "nmi_std": 0.05618004978419971,
+        "time_mean": 0.11375963687896729,
+        "time_std": 0.007928008206148054,
         "success_rate": 1.0,
-        "n_success": 2
+        "n_success": 10
       },
       "RURR-SL": {
-        "acc_mean": 0.5,
-        "acc_std": 0.0,
-        "nmi_mean": 0.7730553622496132,
-        "nmi_std": 0.0033262757284759914,
-        "time_mean": 5.0655437707901,
-        "time_std": 0.06868636608123779,
+        "acc_mean": 0.5208333333333334,
+        "acc_std": 0.04949326553515472,
+        "nmi_mean": 0.7613209692017594,
+        "nmi_std": 0.039565244171155485,
+        "time_mean": 5.915128874778747,
+        "time_std": 2.2067906669129984,
         "success_rate": 1.0,
-        "n_success": 2
+        "n_success": 10
+      }
+    }
+  },
+  "nested_circles": {
+    "name": "Nested Circles",
+    "description": "Nested circles clustering problem",
+    "metrics": {
+      "K-means": {
+        "acc_mean": 0.5293333333333334,
+        "acc_std": 0.001333333333333364,
+        "nmi_mean": 0.0025064970471784767,
+        "nmi_std": 0.00022060214058784844,
+        "time_mean": 0.03602521419525147,
+        "time_std": 0.0051616003020458255,
+        "success_rate": 1.0,
+        "n_success": 10
+      },
+      "RMKMC": {
+        "acc_mean": 0.5583333333333333,
+        "acc_std": 0.08088743893694356,
+        "nmi_mean": 0.06164823180455,
+        "nmi_std": 0.12136196707787084,
+        "time_mean": 0.011167097091674804,
+        "time_std": 0.00569718506692297,
+        "success_rate": 1.0,
+        "n_success": 10
+      },
+      "FKM": {
+        "acc_mean": 0.5133333333333334,
+        "acc_std": 1.1102230246251565e-16,
+        "nmi_mean": 0.0005131432274842332,
+        "nmi_std": 0.0,
+        "time_mean": 0.017455744743347167,
+        "time_std": 0.0013347627829827222,
+        "success_rate": 1.0,
+        "n_success": 10
+      },
+      "RSFKM": {
+        "acc_mean": 0.5246666666666666,
+        "acc_std": 0.0016329931618554354,
+        "nmi_mean": 0.0017700253539811993,
+        "nmi_std": 0.000237410632621661,
+        "time_mean": 0.013564324378967286,
+        "time_std": 0.002473107224691568,
+        "success_rate": 1.0,
+        "n_success": 10
+      },
+      "URR-SL": {
+        "acc_mean": 0.5746666666666667,
+        "acc_std": 0.032117838587855725,
+        "nmi_mean": 0.021950284390585915,
+        "nmi_std": 0.018407278585153255,
+        "time_mean": 0.07223706245422364,
+        "time_std": 0.0027347562681067144,
+        "success_rate": 1.0,
+        "n_success": 10
+      },
+      "RURR-SL": {
+        "acc_mean": 0.5406666666666666,
+        "acc_std": 0.021385353243127257,
+        "nmi_mean": 0.006155856726249795,
+        "nmi_std": 0.005405251127711541,
+        "time_mean": 2.2800478458404543,
+        "time_std": 0.15082939665445705,
+        "success_rate": 1.0,
+        "n_success": 10
+      }
+    }
+  },
+  "moons": {
+    "name": "Two Moons",
+    "description": "Two moons clustering problem",
+    "metrics": {
+      "K-means": {
+        "acc_mean": 0.7529999999999999,
+        "acc_std": 0.0009999999999999898,
+        "nmi_mean": 0.19431128370315653,
+        "nmi_std": 0.001533257859598921,
+        "time_mean": 0.03299388885498047,
+        "time_std": 0.0028980398646140273,
+        "success_rate": 1.0,
+        "n_success": 10
+      },
+      "RMKMC": {
+        "acc_mean": 0.7713333333333333,
+        "acc_std": 0.002211083193570244,
+        "nmi_mean": 0.226520332223029,
+        "nmi_std": 0.0032845023193994803,
+        "time_mean": 0.00637366771697998,
+        "time_std": 0.0018052257841983225,
+        "success_rate": 1.0,
+        "n_success": 10
+      },
+      "FKM": {
+        "acc_mean": 0.75,
+        "acc_std": 0.0,
+        "nmi_mean": 0.18884536422371512,
+        "nmi_std": 0.0,
+        "time_mean": 0.004618120193481445,
+        "time_std": 0.0006272668286301373,
+        "success_rate": 1.0,
+        "n_success": 10
+      },
+      "RSFKM": {
+        "acc_mean": 0.7466666666666668,
+        "acc_std": 1.1102230246251565e-16,
+        "nmi_mean": 0.18369359548969486,
+        "nmi_std": 1.962615573354719e-17,
+        "time_mean": 0.0030533552169799806,
+        "time_std": 0.0002725830564414643,
+        "success_rate": 1.0,
+        "n_success": 10
+      },
+      "URR-SL": {
+        "acc_mean": 0.7186666666666667,
+        "acc_std": 0.11464147009990173,
+        "nmi_mean": 0.1975355523395391,
+        "nmi_std": 0.15539759118738486,
+        "time_mean": 0.07979471683502197,
+        "time_std": 0.0018254662646253522,
+        "success_rate": 1.0,
+        "n_success": 10
+      },
+      "RURR-SL": {
+        "acc_mean": 0.7590000000000001,
+        "acc_std": 0.08313376102536336,
+        "nmi_mean": 0.2315747688102531,
+        "nmi_std": 0.13823333110132172,
+        "time_mean": 2.137182188034058,
+        "time_std": 0.035100462704953914,
+        "success_rate": 1.0,
+        "n_success": 10
+      }
+    }
+  },
+  "glioma": {
+    "name": "GLIOMA",
+    "description": "Gene expression data (50 samples, 4434 genes, 4 classes)",
+    "metrics": {
+      "K-means": {
+        "acc_mean": 0.374,
+        "acc_std": 0.015620499351813323,
+        "nmi_mean": 0.08113188902401708,
+        "nmi_std": 0.0009628112461762231,
+        "time_mean": 0.13330247402191162,
+        "time_std": 0.016898482508819,
+        "success_rate": 1.0,
+        "n_success": 10
+      },
+      "RMKMC": {
+        "acc_mean": 0.38,
+        "acc_std": 0.0,
+        "nmi_mean": 0.08246206583634756,
+        "nmi_std": 8.777083671441753e-18,
+        "time_mean": 0.7522383451461792,
+        "time_std": 0.2561866104096404,
+        "success_rate": 1.0,
+        "n_success": 10
+      },
+      "FKM": {
+        "acc_mean": 0.4,
+        "acc_std": 0.0,
+        "nmi_mean": 0.09357196567203807,
+        "nmi_std": 0.0,
+        "time_mean": 1.2383492231369018,
+        "time_std": 0.18762474136154653,
+        "success_rate": 1.0,
+        "n_success": 10
+      },
+      "RSFKM": {
+        "acc_mean": 0.392,
+        "acc_std": 0.034871191548325374,
+        "nmi_mean": 0.10727976762792761,
+        "nmi_std": 0.02181621237243229,
+        "time_mean": 0.4664331912994385,
+        "time_std": 0.05377338007789793,
+        "success_rate": 1.0,
+        "n_success": 10
+      },
+      "URR-SL": {
+        "acc_mean": 0.366,
+        "acc_std": 0.031048349392520044,
+        "nmi_mean": 0.07851677709712343,
+        "nmi_std": 0.02718718348525397,
+        "time_mean": 1.2142179012298584,
+        "time_std": 0.1742884344185664,
+        "success_rate": 1.0,
+        "n_success": 10
+      },
+      "RURR-SL": {
+        "acc_mean": 0.386,
+        "acc_std": 0.04737087712930804,
+        "nmi_mean": 0.09479227406211238,
+        "nmi_std": 0.05003765876729639,
+        "time_mean": 53.2258199930191,
+        "time_std": 12.41959218190086,
+        "success_rate": 1.0,
+        "n_success": 10
       }
     }
   }

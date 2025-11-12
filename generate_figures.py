@@ -45,6 +45,14 @@ ALGORITHM_COLOURS = {
     "RURR-SL": "#64B5CD",
 }
 
+FIGURE_CAPTIONS = {
+    "3cluster": "Figure 1. Accuracy, NMI, and runtime for the 3-Cluster Gaussian dataset.",
+    "multicluster": "Figure 2. Accuracy, NMI, and runtime for the Multicluster dataset.",
+    "glioma": "Figure 3. Accuracy, NMI, and runtime for the GLIOMA dataset.",
+    "moons": "Figure 4. Accuracy, NMI, and runtime for the Two Moons dataset.",
+    "nested_circles": "Figure 5. Accuracy, NMI, and runtime for the Nested Circles dataset.",
+}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -130,7 +138,7 @@ def plot_dataset(
         # Style might be unavailable depending on the Matplotlib version.
         plt.style.use("default")
 
-    fig, axes = plt.subplots(1, len(METRICS), figsize=(4.2 * len(METRICS), 4.5))
+    fig, axes = plt.subplots(1, len(METRICS), figsize=(4.2 * len(METRICS), 4.9))
 
     x = np.arange(len(ALGORITHM_ORDER))
     width = 0.65
@@ -165,12 +173,21 @@ def plot_dataset(
         finite_heights = means[np.isfinite(means)]
         finite_stds = stds[np.isfinite(stds)]
         if finite_heights.size > 0:
-            top = np.max(finite_heights + finite_stds) * 1.15
-            bottom = np.min(np.minimum(finite_heights - finite_stds, finite_heights))
-            ax.set_ylim(bottom * 0.98 if bottom >= 0 else bottom * 1.1, top)
+            if display_name.lower().startswith("accuracy"):
+                bottom = max(0.0, np.min(np.minimum(finite_heights - finite_stds, finite_heights)))
+                ax.set_ylim(0.0, 1.0)
+            else:
+                top = np.max(finite_heights + finite_stds) * 1.15
+                bottom = np.min(np.minimum(finite_heights - finite_stds, finite_heights))
+                ax.set_ylim(bottom * 0.98 if bottom >= 0 else bottom * 1.1, top)
 
     fig.suptitle(dataset_name, fontsize=14, fontweight="bold")
-    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    caption = FIGURE_CAPTIONS.get(dataset_key)
+    if caption:
+        fig.text(0.5, 0.02, caption, ha="center", va="center", fontsize=11)
+        fig.tight_layout(rect=[0, 0.05, 1, 0.95])
+    else:
+        fig.tight_layout(rect=[0, 0, 1, 0.95])
 
     output_dir.mkdir(parents=True, exist_ok=True)
     for fmt in formats:
@@ -265,9 +282,12 @@ def plot_cross_dataset(
         ]
 
         if finite_heights.size > 0:
-            top = np.max(finite_heights + finite_stds) * 1.15
-            bottom = np.min(np.minimum(finite_heights - finite_stds, finite_heights))
-            ax.set_ylim(bottom * 0.98 if bottom >= 0 else bottom * 1.1, top)
+            if display_name.lower().startswith("accuracy"):
+                ax.set_ylim(0.0, 1.0)
+            else:
+                top = np.max(finite_heights + finite_stds) * 1.15
+                bottom = np.min(np.minimum(finite_heights - finite_stds, finite_heights))
+                ax.set_ylim(bottom * 0.98 if bottom >= 0 else bottom * 1.1, top)
 
         fig.tight_layout(rect=[0, 0, 1, 0.93])
 
